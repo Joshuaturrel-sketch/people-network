@@ -73,8 +73,7 @@ a,button,[role="button"]{transition:color var(--transition),background var(--tra
 .node circle{stroke-width:2;transition:opacity .3s}
 .node text{font-size:11px;fill:var(--text);pointer-events:none;font-family:var(--font)}
 .node.stale circle{opacity:.35}
-.link{stroke:var(--border);stroke-opacity:.7;fill:none}
-.link.strong{stroke:var(--primary);stroke-opacity:.5}
+.link{fill:none;stroke-linecap:round}
 #map-wrap{flex:1;position:relative}
 #world-svg{width:100%;height:100%}
 .map-pin{cursor:pointer;transition:transform .15s}
@@ -140,7 +139,7 @@ canvas.chart-canvas{max-height:180px}
     <div id="topbar-right">
       <div id="status-dot" title="Data status"></div>
       <button id="refresh-btn" title="Refresh data"><i data-lucide="refresh-cw" style="width:16px;height:16px"></i></button>
-      <button id="theme-btn" data-theme-toggle title="Toggle theme"><i data-lucide="sun" style="width:16px;height:16px"></i></button>
+      <button id="theme-btn" title="Toggle theme"><i data-lucide="sun" style="width:16px;height:16px"></i></button>
     </div>
   </div>
 
@@ -181,15 +180,17 @@ canvas.chart-canvas{max-height:180px}
 
 <script>
 let ALL_PEOPLE = [];
+let ALL_EDGES  = [];
 let filteredPeople = [];
 let simulation = null;
 let chartInstances = {};
 const STALE_DAYS = 60;
+
 const CAT_COLORS = {
-  'Trading': 'var(--blue)',
+  'Trading':      'var(--blue)',
   'Professional': 'var(--primary)',
-  'Personal': 'var(--success)',
-  'Family': 'var(--warning)',
+  'Personal':     'var(--success)',
+  'Family':       'var(--warning)',
   'Acquaintance': 'var(--muted)',
 };
 const CAT_COLOR_DEFAULT = 'var(--faint)';
@@ -198,7 +199,6 @@ function catColor(cats){
   if (!cats || !cats.length) return CAT_COLOR_DEFAULT;
   return CAT_COLORS[cats[0]] || CAT_COLOR_DEFAULT;
 }
-
 function daysSince(dateStr){
   if (!dateStr) return null;
   return (Date.now() - new Date(dateStr).getTime()) / 86400000;
@@ -208,10 +208,11 @@ function isStale(person){
   return d !== null && d >= STALE_DAYS;
 }
 
+// ── Theme toggle ──
 (function(){
-  const btn = document.getElementById('theme-btn');
+  const btn  = document.getElementById('theme-btn');
   const html = document.documentElement;
-  let mode = html.getAttribute('data-theme') || 'dark';
+  let mode   = html.getAttribute('data-theme') || 'dark';
   function setTheme(m){
     mode = m;
     html.setAttribute('data-theme', m);
@@ -224,6 +225,7 @@ function isStale(person){
   btn.addEventListener('click', () => setTheme(mode === 'dark' ? 'light' : 'dark'));
 })();
 
+// ── Fetch ──
 async function fetchData(){
   setStatus('loading');
   showLoading('Fetching from Notion…');
@@ -235,11 +237,12 @@ async function fetchData(){
     }
     const data = await res.json();
     ALL_PEOPLE = data.people || [];
+    ALL_EDGES  = data.edges  || [];
     setStatus('ok');
     hideLoading();
     populateFilters();
     applyFilters();
-    if (chartInstances) destroyCharts();
+    destroyCharts();
     renderStats();
     renderMap();
   } catch(err){
@@ -250,13 +253,12 @@ async function fetchData(){
 }
 
 function setStatus(s){
-  const dot = document.getElementById('status-dot');
-  dot.className = s === 'loading' ? 'loading' : s === 'ok' ? 'ok' : 'err';
+  document.getElementById('status-dot').className =
+    s === 'loading' ? 'loading' : s === 'ok' ? 'ok' : 'err';
 }
 function showLoading(msg){
-  const o = document.getElementById('loading-overlay');
   document.getElementById('loading-msg').textContent = msg;
-  o.classList.remove('hidden');
+  document.getElementById('loading-overlay').classList.remove('hidden');
 }
 function hideLoading(){
   document.getElementById('loading-overlay').classList.add('hidden');
@@ -268,6 +270,7 @@ function showError(msg){
   setTimeout(() => b.style.display = 'none', 6000);
 }
 
+// ── Filters ──
 function populateFilters(){
   const cats = new Set(), layers = new Set(), tags = new Set(), industries = new Set();
   ALL_PEOPLE.forEach(p => {
@@ -276,30 +279,29 @@ function populateFilters(){
     p.tags.forEach(t => tags.add(t));
     p.industrySector.forEach(i => industries.add(i));
   });
-  fillSelect('f-category', [...cats].sort(), 'All Categories');
-  fillSelect('f-layer', [...layers].sort(), 'All Layers');
-  fillSelect('f-tags', [...tags].sort(), 'All Tags');
-  fillSelect('f-industry', [...industries].sort(), 'All Industries');
+  fillSelect('f-category', [...cats].sort(),      'All Categories');
+  fillSelect('f-layer',    [...layers].sort(),    'All Layers');
+  fillSelect('f-tags',     [...tags].sort(),      'All Tags');
+  fillSelect('f-industry', [...industries].sort(),'All Industries');
 }
 function fillSelect(id, options, placeholder){
   const sel = document.getElementById(id);
   sel.innerHTML = `<option value="">${placeholder}</option>` +
     options.map(o => `<option value="${o}">${o}</option>`).join('');
 }
-
 function applyFilters(){
-  const cat = document.getElementById('f-category').value;
+  const cat   = document.getElementById('f-category').value;
   const layer = document.getElementById('f-layer').value;
-  const tag = document.getElementById('f-tags').value;
-  const ind = document.getElementById('f-industry').value;
+  const tag   = document.getElementById('f-tags').value;
+  const ind   = document.getElementById('f-industry').value;
   const stale = document.getElementById('f-stale').checked;
 
   filteredPeople = ALL_PEOPLE.filter(p => {
-    if (cat && !p.category.includes(cat)) return false;
-    if (layer && p.layer !== layer) return false;
-    if (tag && !p.tags.includes(tag)) return false;
-    if (ind && !p.industrySector.includes(ind)) return false;
-    if (stale && !isStale(p)) return false;
+    if (cat   && !p.category.includes(cat))        return false;
+    if (layer && p.layer !== layer)                 return false;
+    if (tag   && !p.tags.includes(tag))             return false;
+    if (ind   && !p.industrySector.includes(ind))   return false;
+    if (stale && !isStale(p))                       return false;
     return true;
   });
 
@@ -308,7 +310,6 @@ function applyFilters(){
 
   renderGraph();
 }
-
 ['f-category','f-layer','f-tags','f-industry'].forEach(id =>
   document.getElementById(id).addEventListener('change', applyFilters));
 document.getElementById('f-stale').addEventListener('change', function(){
@@ -316,50 +317,67 @@ document.getElementById('f-stale').addEventListener('change', function(){
   applyFilters();
 });
 
+// ═══════════════════════════════════════════════════════════════
+//  VIEW 1 — D3 FORCE GRAPH
+// ═══════════════════════════════════════════════════════════════
 function renderGraph(){
   const wrap = document.getElementById('graph-wrap');
-  const svg = d3.select('#canvas-svg');
+  const svg  = d3.select('#canvas-svg');
   svg.selectAll('*').remove();
   if (simulation) simulation.stop();
 
-  const W = wrap.offsetWidth || wrap.clientWidth || 800;
-  const H = wrap.offsetHeight || wrap.clientHeight || 600;
-
-  if (W === 0 || H === 0){
-    requestAnimationFrame(renderGraph);
-    return;
-  }
+  const W = wrap.offsetWidth  || 800;
+  const H = wrap.offsetHeight || 600;
+  if (W === 0 || H === 0){ requestAnimationFrame(renderGraph); return; }
 
   const filteredIds = new Set(filteredPeople.map(p => p.id));
   const nodes = filteredPeople.map(p => ({...p}));
 
-  const links = [];
-  filteredPeople.forEach(p => {
-    p.connectedTo.forEach(targetId => {
-      if (filteredIds.has(targetId)){
-        links.push({ source: p.id, target: targetId, strong: (p.relationshipStrength || 0) >= 7 });
-      }
+  // Build links from Connection Edges database
+  // Each edge has personA, personB, strength (1–10)
+  const links = ALL_EDGES
+    .filter(e => filteredIds.has(e.personA) && filteredIds.has(e.personB))
+    .map(e => ({
+      source:   e.personA,
+      target:   e.personB,
+      strength: e.strength ?? 1,
+      label:    e.label,
+    }));
+
+  // Fallback: if no edges in DB yet, derive from connectedTo relations
+  const useFallback = links.length === 0;
+  if (useFallback){
+    filteredPeople.forEach(p => {
+      p.connectedTo.forEach(targetId => {
+        if (filteredIds.has(targetId)){
+          links.push({ source: p.id, target: targetId, strength: p.relationshipStrength ?? 1, label: '' });
+        }
+      });
     });
-  });
+  }
 
   const zoom = d3.zoom().scaleExtent([0.2, 4])
     .on('zoom', e => g.attr('transform', e.transform));
   svg.call(zoom);
-
   const g = svg.append('g');
 
+  // Links — thickness driven by edge Strength (1–10)
   const link = g.append('g').selectAll('line')
     .data(links).join('line')
-    .attr('class', d => 'link' + (d.strong ? ' strong' : ''));
+    .attr('class', 'link')
+    .attr('stroke', d => d.strength >= 7 ? 'var(--primary)' : 'var(--border)')
+    .attr('stroke-opacity', d => d.strength >= 7 ? 0.7 : 0.5)
+    .attr('stroke-width', d => Math.max(1, (d.strength || 1) * 0.6));
 
+  // Nodes
   const node = g.append('g').selectAll('g')
     .data(nodes, d => d.id)
     .join('g')
     .attr('class', d => 'node' + (isStale(d) ? ' stale' : ''))
     .call(d3.drag()
       .on('start', (e,d) => { if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
-      .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
-      .on('end', (e,d) => { if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
+      .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end',   (e,d) => { if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
     .on('click', (e,d) => { e.stopPropagation(); openPanel(d); });
 
   node.append('circle')
@@ -376,9 +394,9 @@ function renderGraph(){
     .attr('font-size', '11px');
 
   simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id(d => d.id).distance(80).strength(0.3))
-    .force('charge', d3.forceManyBody().strength(-200))
-    .force('center', d3.forceCenter(W/2, H/2))
+    .force('link',      d3.forceLink(links).id(d => d.id).distance(80).strength(0.3))
+    .force('charge',    d3.forceManyBody().strength(-200))
+    .force('center',    d3.forceCenter(W/2, H/2))
     .force('collision', d3.forceCollide(d => 10 + (d.relationshipStrength || 3) * 2))
     .on('tick', () => {
       link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
@@ -389,19 +407,19 @@ function renderGraph(){
   svg.on('click', () => closePanel());
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  VIEW 2 — WORLD MAP
+// ═══════════════════════════════════════════════════════════════
 async function renderMap(){
-  const svg = d3.select('#world-svg');
+  const svg  = d3.select('#world-svg');
   svg.selectAll('*').remove();
 
   const wrap = document.getElementById('main');
-  const W = wrap.offsetWidth || 900;
+  const W = wrap.offsetWidth  || 900;
   const H = wrap.offsetHeight || 500;
 
-  const projection = d3.geoNaturalEarth1()
-    .scale(W / 6.4)
-    .translate([W/2, H/2]);
-  const path = d3.geoPath().projection(projection);
-
+  const projection = d3.geoNaturalEarth1().scale(W/6.4).translate([W/2, H/2]);
+  const path       = d3.geoPath().projection(projection);
   svg.attr('viewBox', `0 0 ${W} ${H}`);
 
   let worldData;
@@ -409,43 +427,32 @@ async function renderMap(){
     const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
     worldData = await r.json();
   } catch(e){
-    svg.append('text').attr('x', W/2).attr('y', H/2)
-       .attr('text-anchor','middle').attr('fill','var(--muted)')
-       .text('Map data unavailable');
+    svg.append('text').attr('x',W/2).attr('y',H/2)
+      .attr('text-anchor','middle').attr('fill','var(--muted)').text('Map data unavailable');
     return;
   }
 
   const countries = topojson_feature(worldData, worldData.objects.countries);
-
-  const zoom = d3.zoom().scaleExtent([1, 12])
-    .on('zoom', e => mapG.attr('transform', e.transform));
+  const zoom = d3.zoom().scaleExtent([1,12]).on('zoom', e => mapG.attr('transform', e.transform));
   svg.call(zoom);
 
   const mapG = svg.append('g');
-
-  mapG.append('rect').attr('width', W).attr('height', H)
-    .attr('fill', 'var(--offset)');
-
-  mapG.append('g').selectAll('path')
-    .data(countries.features).join('path')
+  mapG.append('rect').attr('width',W).attr('height',H).attr('fill','var(--offset)');
+  mapG.append('g').selectAll('path').data(countries.features).join('path')
     .attr('d', path)
-    .attr('fill', 'var(--surface2)')
-    .attr('stroke', 'var(--border)')
+    .attr('fill','var(--surface2)')
+    .attr('stroke','var(--border)')
     .attr('stroke-width', 0.5);
 
   const geocoded = ALL_PEOPLE
     .filter(p => p.city || p.country)
-    .map(p => {
-      const coords = geocodeCity(p.city, p.country);
-      if (!coords) return null;
-      return { person: p, coords };
-    })
+    .map(p => { const c = geocodeCity(p.city, p.country); return c ? {person:p, coords:c} : null; })
     .filter(Boolean);
 
   const clusters = {};
   geocoded.forEach(({person, coords}) => {
     const key = `${Math.round(coords[0]/2)*2},${Math.round(coords[1]/2)*2}`;
-    if (!clusters[key]) clusters[key] = { coords, people: [] };
+    if (!clusters[key]) clusters[key] = { coords, people:[] };
     clusters[key].people.push(person);
   });
 
@@ -453,18 +460,16 @@ async function renderMap(){
 
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
-    const [px, py] = projection([lng, lat]) || [null, null];
-    if (px === null) return;
+    const proj = projection([lng, lat]);
+    if (!proj) return;
+    const [px, py] = proj;
 
-    const g = mapG.append('g')
-      .attr('class', 'map-pin')
-      .attr('transform', `translate(${px},${py})`);
-
+    const g = mapG.append('g').attr('class','map-pin').attr('transform',`translate(${px},${py})`);
     const r = cluster.people.length > 1 ? 10 : 7;
 
     g.append('circle')
-      .attr('r', r).attr('fill', 'var(--primary)').attr('fill-opacity', 0.85)
-      .attr('stroke', 'var(--surface)').attr('stroke-width', 1.5);
+      .attr('r', r).attr('fill','var(--primary)').attr('fill-opacity',0.85)
+      .attr('stroke','var(--surface)').attr('stroke-width',1.5);
 
     if (cluster.people.length > 1){
       g.append('text').attr('class','cluster-badge')
@@ -474,11 +479,11 @@ async function renderMap(){
 
     g.on('mousemove', (e) => {
       const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
-      const more = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
+      const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
       tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
       tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX + 12) + 'px';
-      tooltip.style.top = (e.clientY - 10) + 'px';
+      tooltip.style.left = (e.clientX+12)+'px';
+      tooltip.style.top  = (e.clientY-10)+'px';
     }).on('mouseleave', () => tooltip.style.display = 'none')
       .on('click', (e) => {
         e.stopPropagation();
@@ -491,7 +496,7 @@ async function renderMap(){
 }
 
 function geocodeCity(city, country){
-  const CL = city ? city.toLowerCase() : '';
+  const CL = city    ? city.toLowerCase()    : '';
   const CO = country ? country.toLowerCase() : '';
 
   const CITY_MAP = {
@@ -511,7 +516,6 @@ function geocodeCity(city, country){
     'cairo':[31.24,30.04],'johannesburg':[28.03,-26.2],'lagos':[3.4,6.45],
     'nairobi':[36.82,-1.29],'istanbul':[29.0,41.01],'moscow':[37.62,55.76],
   };
-
   const COUNTRY_MAP = {
     'singapore':[103.82,1.35],'uae':[54.37,23.42],'united arab emirates':[54.37,23.42],
     'uk':[-1.5,52],'united kingdom':[-1.5,52],'usa':[-98.58,39.83],
@@ -526,7 +530,7 @@ function geocodeCity(city, country){
     'switzerland':[8.23,46.82],'spain':[-3.75,40.46],'italy':[12.57,41.87],
   };
 
-  if (CL && CITY_MAP[CL]) return CITY_MAP[CL];
+  if (CL && CITY_MAP[CL])    return CITY_MAP[CL];
   if (CO && COUNTRY_MAP[CO]) return COUNTRY_MAP[CO];
   return null;
 }
@@ -536,26 +540,27 @@ function topojson_feature(topology, object){
     const a = topology.arcs[i < 0 ? ~i : i];
     let x=0, y=0;
     const pts = a.map(([dx,dy]) => {
-      x += dx; y += dy;
-      const scale = topology.transform.scale;
-      const translate = topology.transform.translate;
-      return [x*scale[0]+translate[0], y*scale[1]+translate[1]];
+      x+=dx; y+=dy;
+      return [x*topology.transform.scale[0]+topology.transform.translate[0],
+              y*topology.transform.scale[1]+topology.transform.translate[1]];
     });
     return i < 0 ? pts.reverse() : pts;
   }
   function ring(arcs){ return arcs.flatMap(i => arc(i)); }
   function poly(arcs){ return { type:'Polygon', coordinates: arcs.map(ring) }; }
   function mpoly(arcs){ return { type:'MultiPolygon', coordinates: arcs.map(r => r.map(ring)) }; }
-
-  const features = object.geometries.map(g => ({
-    type:'Feature',
-    id: g.id,
-    properties: g.properties || {},
-    geometry: g.type === 'Polygon' ? poly(g.arcs) : g.type === 'MultiPolygon' ? mpoly(g.arcs) : null,
-  }));
-  return { type:'FeatureCollection', features };
+  return {
+    type:'FeatureCollection',
+    features: object.geometries.map(g => ({
+      type:'Feature', id:g.id, properties:g.properties||{},
+      geometry: g.type==='Polygon' ? poly(g.arcs) : g.type==='MultiPolygon' ? mpoly(g.arcs) : null,
+    }))
+  };
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  VIEW 3 — STATS
+// ═══════════════════════════════════════════════════════════════
 function destroyCharts(){
   Object.values(chartInstances).forEach(c => c.destroy());
   chartInstances = {};
@@ -569,37 +574,40 @@ function renderStats(){
     return;
   }
 
-  const people = ALL_PEOPLE;
-  const total = people.length;
-  const stale = people.filter(isStale).length;
-  const clients = people.filter(p => p.clientStatus === 'Already Client').length;
+  const people   = ALL_PEOPLE;
+  const total    = people.length;
+  const stale    = people.filter(isStale).length;
+  const clients  = people.filter(p => p.clientStatus === 'Already Client').length;
   const potential = people.filter(p => p.clientStatus === 'Potential Client').length;
-  const avgStrength = (people.reduce((s,p) => s + (p.relationshipStrength||0), 0) / total).toFixed(1);
+  const avgStr   = (people.reduce((s,p) => s+(p.relationshipStrength||0),0)/total).toFixed(1);
+  const totalEdges = ALL_EDGES.length;
+  const avgEdgeStr = ALL_EDGES.length
+    ? (ALL_EDGES.reduce((s,e)=>s+(e.strength||0),0)/ALL_EDGES.length).toFixed(1)
+    : 'N/A';
 
   const kpiCard = document.createElement('div');
   kpiCard.className = 'stat-card';
   kpiCard.innerHTML = `<h3>Overview</h3><div class="kpi-grid">
-    ${kpi(total,'Total')}${kpi(clients,'Clients')}${kpi(potential,'Potential')}${kpi(stale,'Re-engage','var(--warning)')}${kpi(avgStrength,'Avg Strength')}
+    ${kpi(total,'Contacts')}${kpi(clients,'Clients')}${kpi(potential,'Potential')}${kpi(stale,'Re-engage','var(--warning)')}${kpi(totalEdges,'Connections')}${kpi(avgEdgeStr,'Avg Edge Str')}
   </div>`;
   wrap.appendChild(kpiCard);
 
-  addPieChart(wrap, 'By Category', count(people, p => p.category[0] || 'Other'), Object.values(CAT_COLORS));
-  addPieChart(wrap, 'By Layer', count(people, p => p.layer || 'Unknown'), ['var(--primary)', 'var(--muted)']);
-  addBarChart(wrap, 'By Industry / Sector', count(people, p => p.industrySector[0] || 'Other'), 'var(--blue)');
-  addPieChart(wrap, 'Client Status', count(people, p => p.clientStatus || 'N/A'), ['var(--success)', 'var(--warning)', 'var(--error)', 'var(--faint)']);
-
+  addPieChart(wrap, 'By Category',    count(people, p => p.category[0]||'Other'), Object.values(CAT_COLORS));
+  addPieChart(wrap, 'By Layer',       count(people, p => p.layer||'Unknown'),     ['var(--primary)','var(--muted)']);
+  addBarChart(wrap, 'By Industry',    count(people, p => p.industrySector[0]||'Other'), 'var(--blue)');
+  addPieChart(wrap, 'Client Status',  count(people, p => p.clientStatus||'N/A'), ['var(--success)','var(--warning)','var(--error)','var(--faint)']);
   const tagCounts = {};
-  people.forEach(p => p.tags.forEach(t => tagCounts[t] = (tagCounts[t]||0)+1));
-  addBarChart(wrap, 'By Tags', tagCounts, 'var(--purple)');
-  addBarChart(wrap, 'Last Contacted (months)', countByMonth(people), 'var(--primary)');
+  people.forEach(p => p.tags.forEach(t => tagCounts[t]=(tagCounts[t]||0)+1));
+  addBarChart(wrap, 'By Tags',        tagCounts,   'var(--purple)');
+  addBarChart(wrap, 'Last Contacted', countByMonth(people), 'var(--primary)');
 }
 
 function kpi(val, lbl, color){
   return `<div class="kpi"><div class="kpi-val" style="color:${color||'var(--text)'}">${val}</div><div class="kpi-lbl">${lbl}</div></div>`;
 }
 function count(arr, fn){
-  const out = {};
-  arr.forEach(p => { const k = fn(p); out[k] = (out[k]||0)+1; });
+  const out={};
+  arr.forEach(p=>{ const k=fn(p); out[k]=(out[k]||0)+1; });
   return out;
 }
 function countByMonth(people){
@@ -607,90 +615,67 @@ function countByMonth(people){
   const out = {};
   for(let i=5;i>=0;i--){
     const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    const key = d.toLocaleString('default',{month:'short',year:'2-digit'});
-    out[key] = 0;
+    out[d.toLocaleString('default',{month:'short',year:'2-digit'})] = 0;
   }
   people.forEach(p => {
     if(!p.lastContacted) return;
-    const d = new Date(p.lastContacted);
-    const key = d.toLocaleString('default',{month:'short',year:'2-digit'});
+    const key = new Date(p.lastContacted).toLocaleString('default',{month:'short',year:'2-digit'});
     if(key in out) out[key]++;
   });
   return out;
 }
 function cssVar(v){
-  return getComputedStyle(document.documentElement).getPropertyValue(v.replace('var(','').replace(')','').trim()).trim() || v;
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(v.replace('var(','').replace(')','').trim()).trim() || v;
 }
-
 function addPieChart(wrap, title, data, colors){
   const card = document.createElement('div');
   card.className = 'stat-card';
-  const id = 'chart-' + Math.random().toString(36).slice(2);
+  const id = 'chart-'+Math.random().toString(36).slice(2);
   card.innerHTML = `<h3>${title}</h3><canvas id="${id}" class="chart-canvas"></canvas>`;
   wrap.appendChild(card);
-
-  const labels = Object.keys(data);
-  const values = Object.values(data);
-  const bgColors = colors.map(c => cssVar(c) || c);
-
   chartInstances[id] = new Chart(document.getElementById(id), {
-    type: 'doughnut',
-    data: { labels, datasets:[{ data: values, backgroundColor: bgColors, borderWidth: 0 }] },
-    options: {
-      responsive:true, maintainAspectRatio:true,
-      plugins:{ legend:{ position:'right', labels:{ color: cssVar('--text'), font:{size:11}, boxWidth:12, padding:8 } } },
-      animation:{ duration:600 },
-    }
+    type:'doughnut',
+    data:{ labels:Object.keys(data), datasets:[{ data:Object.values(data), backgroundColor:colors.map(c=>cssVar(c)||c), borderWidth:0 }] },
+    options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ position:'right', labels:{ color:cssVar('--text'), font:{size:11}, boxWidth:12, padding:8 } } }, animation:{duration:600} }
   });
 }
-
 function addBarChart(wrap, title, data, color){
   const card = document.createElement('div');
   card.className = 'stat-card';
-  const id = 'chart-' + Math.random().toString(36).slice(2);
+  const id = 'chart-'+Math.random().toString(36).slice(2);
   card.innerHTML = `<h3>${title}</h3><canvas id="${id}" class="chart-canvas"></canvas>`;
   wrap.appendChild(card);
-
-  const labels = Object.keys(data);
-  const values = Object.values(data);
-  const bg = cssVar(color) || color;
-
   chartInstances[id] = new Chart(document.getElementById(id), {
-    type: 'bar',
-    data: { labels, datasets:[{ data: values, backgroundColor: bg + 'cc', borderRadius: 4, borderSkipped: false }] },
-    options: {
-      responsive:true, maintainAspectRatio:true, indexAxis:'y',
-      plugins:{ legend:{ display:false } },
-      scales:{
-        x:{ ticks:{ color:cssVar('--muted'), font:{size:10} }, grid:{ color: cssVar('--divider') } },
-        y:{ ticks:{ color:cssVar('--muted'), font:{size:10} }, grid:{ display:false } },
-      },
-      animation:{ duration:600 },
-    }
+    type:'bar',
+    data:{ labels:Object.keys(data), datasets:[{ data:Object.values(data), backgroundColor:(cssVar(color)||color)+'cc', borderRadius:4, borderSkipped:false }] },
+    options:{ responsive:true, maintainAspectRatio:true, indexAxis:'y', plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:cssVar('--muted'),font:{size:10}},grid:{color:cssVar('--divider')}}, y:{ticks:{color:cssVar('--muted'),font:{size:10}},grid:{display:false}} }, animation:{duration:600} }
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  DETAIL PANEL
+// ═══════════════════════════════════════════════════════════════
 function openPanel(person){
-  const panel = document.getElementById('detail-panel');
   document.getElementById('panel-name').textContent = person.name || 'Unknown';
   const body = document.getElementById('panel-body');
   body.innerHTML = '';
 
   const rows = [
-    ['Category', person.category.join(', ')],
-    ['Layer', person.layer],
+    ['Category',            person.category.join(', ')],
+    ['Layer',               person.layer],
     ['Relationship Strength', person.relationshipStrength !== null ? `${person.relationshipStrength}/10` : null],
-    ['Client Status', person.clientStatus],
-    ['Client Probability', person.clientProbability !== null ? `${Math.round(person.clientProbability * 100)}%` : null],
-    ['Industry', person.industrySector.join(', ')],
-    ['Location', [person.city, person.country].filter(Boolean).join(', ')],
-    ['Last Contacted', person.lastContacted],
-    ['Date Met', person.dateMet],
-    ['Met Via', person.metVia],
-    ['Email', person.email ? `<a href="mailto:${person.email}">${person.email}</a>` : null],
-    ['Phone', person.phone ? `<a href="tel:${person.phone}">${person.phone}</a>` : null],
-    ['LinkedIn', person.linkedin ? `<a href="${person.linkedin}" target="_blank" rel="noopener">View Profile</a>` : null],
-    ['Notes', person.notes],
+    ['Client Status',       person.clientStatus],
+    ['Client Probability',  person.clientProbability !== null ? `${Math.round(person.clientProbability*100)}%` : null],
+    ['Industry',            person.industrySector.join(', ')],
+    ['Location',            [person.city, person.country].filter(Boolean).join(', ')],
+    ['Last Contacted',      person.lastContacted],
+    ['Date Met',            person.dateMet],
+    ['Met Via',             person.metVia],
+    ['Email',   person.email    ? `<a href="mailto:${person.email}">${person.email}</a>` : null],
+    ['Phone',   person.phone    ? `<a href="tel:${person.phone}">${person.phone}</a>` : null],
+    ['LinkedIn',person.linkedin ? `<a href="${person.linkedin}" target="_blank" rel="noopener">View Profile</a>` : null],
+    ['Notes',               person.notes],
   ];
 
   rows.forEach(([label, value]) => {
@@ -702,10 +687,8 @@ function openPanel(person){
   });
 
   if (person.relationshipStrength !== null){
-    const lastRow = body.querySelector('.detail-row:nth-child(3)');
-    if (lastRow){
-      lastRow.innerHTML += `<div class="strength-bar"><div class="strength-fill" style="width:${person.relationshipStrength*10}%"></div></div>`;
-    }
+    const row = body.querySelector('.detail-row:nth-child(3)');
+    if (row) row.innerHTML += `<div class="strength-bar"><div class="strength-fill" style="width:${person.relationshipStrength*10}%"></div></div>`;
   }
 
   if (person.tags.length){
@@ -723,13 +706,20 @@ function openPanel(person){
     body.appendChild(div);
   }
 
-  const connected = ALL_PEOPLE.filter(p =>
-    person.connectedTo.includes(p.id) || person.connectedFrom.includes(p.id));
+  // Connections via Edge database
+  const connected = ALL_EDGES
+    .filter(e => e.personA === person.id || e.personB === person.id)
+    .map(e => {
+      const otherId = e.personA === person.id ? e.personB : e.personA;
+      const other   = ALL_PEOPLE.find(p => p.id === otherId);
+      return other ? { person: other, strength: e.strength, label: e.label } : null;
+    }).filter(Boolean);
+
   if (connected.length){
     const div = document.createElement('div');
     div.className = 'detail-row';
     div.innerHTML = `<div class="detail-label">Connected To (${connected.length})</div>
-      <div class="detail-value">${connected.map(p=>`<a href="#" onclick="return false;" data-id="${p.id}">${p.name}</a>`).join(', ')}</div>`;
+      <div class="detail-value">${connected.map(c=>`<a href="#" onclick="return false;" data-id="${c.person.id}">${c.person.name}${c.strength ? ` (${c.strength})` : ''}</a>`).join(', ')}</div>`;
     div.querySelectorAll('a[data-id]').forEach(a =>
       a.addEventListener('click', () => {
         const target = ALL_PEOPLE.find(p => p.id === a.dataset.id);
@@ -738,23 +728,22 @@ function openPanel(person){
     body.appendChild(div);
   }
 
-  panel.classList.add('open');
+  document.getElementById('detail-panel').classList.add('open');
   lucide.createIcons();
 }
 
 function openClusterPanel(people){
-  const panel = document.getElementById('detail-panel');
-  document.getElementById('panel-name').textContent = `${people[0].city || people[0].country} (${people.length})`;
+  document.getElementById('panel-name').textContent = `${people[0].city||people[0].country} (${people.length})`;
   const body = document.getElementById('panel-body');
   body.innerHTML = '';
   people.forEach(p => {
     const div = document.createElement('div');
-    div.style.cssText = 'padding:.5rem .75rem;background:var(--offset);border-radius:var(--r-md);cursor:pointer;font-size:.85rem;';
+    div.style.cssText = 'padding:.5rem .75rem;background:var(--offset);border-radius:var(--r-md);cursor:pointer;font-size:.85rem;margin-bottom:.25rem';
     div.textContent = p.name;
     div.addEventListener('click', () => openPanel(p));
     body.appendChild(div);
   });
-  panel.classList.add('open');
+  document.getElementById('detail-panel').classList.add('open');
 }
 
 function closePanel(){
@@ -762,21 +751,16 @@ function closePanel(){
 }
 document.getElementById('panel-close').addEventListener('click', closePanel);
 
+// ── Tabs ──
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
-    const viewId = 'view-' + btn.dataset.view;
-    document.getElementById(viewId).classList.add('active');
+    document.getElementById('view-'+btn.dataset.view).classList.add('active');
     closePanel();
-
-    if (btn.dataset.view === 'graph') {
-      requestAnimationFrame(renderGraph);
-    }
-    if (btn.dataset.view === 'map'){
-      requestAnimationFrame(renderMap);
-    }
+    if (btn.dataset.view === 'graph') requestAnimationFrame(renderGraph);
+    if (btn.dataset.view === 'map')   requestAnimationFrame(renderMap);
   });
 });
 
@@ -785,13 +769,12 @@ document.getElementById('refresh-btn').addEventListener('click', () => {
   fetchData();
 });
 
-const resizeObserver = new ResizeObserver(() => {
-  const activeView = document.querySelector('.view.active');
-  if (!activeView) return;
-  if (activeView.id === 'view-graph') renderGraph();
-  if (activeView.id === 'view-map') renderMap();
-});
-resizeObserver.observe(document.getElementById('main'));
+new ResizeObserver(() => {
+  const active = document.querySelector('.view.active');
+  if (!active) return;
+  if (active.id === 'view-graph') renderGraph();
+  if (active.id === 'view-map')   renderMap();
+}).observe(document.getElementById('main'));
 
 lucide.createIcons();
 fetchData();
