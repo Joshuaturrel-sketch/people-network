@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>People Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface2:#fbfbf9;--offset:#f3f0ec;--offset2:#edeae5;
+  --dynamic:#e6e4df;--divider:#dcd9d5;--border:#d4d1ca;
+  --text:#28251d;--muted:#7a7974;--faint:#bab9b4;--inverse:#f9f8f4;
+  --primary:#01696f;--primary-h:#0c4e54;--primary-hl:#cedcd8;
+  --warning:#964219;--error:#a12c7b;--success:#437a22;
+  --orange:#da7101;--gold:#d19900;--blue:#006494;--purple:#7a39bb;
+  --shadow-sm:0 1px 2px oklch(0.2 0.01 80/0.06);
+  --shadow-md:0 4px 12px oklch(0.2 0.01 80/0.08);
+  --shadow-lg:0 12px 32px oklch(0.2 0.01 80/0.12);
+  --r-sm:0.375rem;--r-md:0.5rem;--r-lg:0.75rem;--r-xl:1rem;--r-full:9999px;
+  --transition:180ms cubic-bezier(0.16,1,0.3,1);
+  --font:'Inter',sans-serif;
+}
+[data-theme="dark"]{
+  --bg:#171614;--surface:#1c1b19;--surface2:#201f1d;--offset:#1d1c1a;--offset2:#22211f;
+  --dynamic:#2d2c2a;--divider:#262523;--border:#393836;
+  --text:#cdccca;--muted:#797876;--faint:#5a5957;--inverse:#2b2a28;
+  --primary:#4f98a3;--primary-h:#227f8b;--primary-hl:#313b3b;
+  --warning:#bb653b;--error:#d163a7;--success:#6daa45;
+  --orange:#fdab43;--gold:#e8af34;--blue:#5591c7;--purple:#a86fdf;
+  --shadow-sm:0 1px 2px oklch(0 0 0/0.2);
+  --shadow-md:0 4px 12px oklch(0 0 0/0.3);
+  --shadow-lg:0 12px 32px oklch(0 0 0/0.4);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{font-family:var(--font);font-size:1rem;color:var(--text);background:var(--bg);min-height:100dvh;overflow:hidden}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
+a,button,[role="button"]{transition:color var(--transition),background var(--transition),border-color var(--transition),box-shadow var(--transition),opacity var(--transition)}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:var(--r-sm)}
+#app{display:grid;grid-template-rows:56px 1fr;height:100dvh}
+#topbar{display:flex;align-items:center;gap:1rem;padding:0 1.25rem;background:var(--surface);border-bottom:1px solid var(--border);z-index:100}
+#logo{display:flex;align-items:center;gap:.5rem;font-weight:600;font-size:.95rem;letter-spacing:-.01em;flex-shrink:0}
+#logo svg{color:var(--primary)}
+#nav-tabs{display:flex;gap:.25rem;flex:1}
+.tab-btn{padding:.35rem .85rem;border-radius:var(--r-full);font-size:.8rem;font-weight:500;color:var(--muted);transition:all var(--transition)}
+.tab-btn:hover{color:var(--text);background:var(--dynamic)}
+.tab-btn.active{color:var(--primary);background:var(--primary-hl)}
+#topbar-right{display:flex;align-items:center;gap:.5rem;margin-left:auto}
+#refresh-btn,#theme-btn{padding:.4rem;border-radius:var(--r-md);color:var(--muted);display:flex;align-items:center}
+#refresh-btn:hover,#theme-btn:hover{color:var(--text);background:var(--dynamic)}
+#status-dot{width:8px;height:8px;border-radius:50%;background:var(--faint);transition:background .3s}
+#status-dot.loading{background:var(--gold);animation:pulse 1s ease-in-out infinite}
+#status-dot.ok{background:var(--success)}
+#status-dot.err{background:var(--error)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#main{position:relative;overflow:hidden}
+.view{position:absolute;inset:0;display:none}
+.view.active{display:flex;flex-direction:column}
+#filter-bar{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0;z-index:10}
+.filter-select{background:var(--offset);border:1px solid var(--border);color:var(--text);border-radius:var(--r-md);padding:.3rem .65rem;font-size:.78rem;cursor:pointer}
+.filter-select:focus-visible{outline:2px solid var(--primary)}
+#filter-stale{display:flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--muted);cursor:pointer;padding:.3rem .65rem;background:var(--offset);border:1px solid var(--border);border-radius:var(--r-md)}
+#filter-stale input{accent-color:var(--primary);cursor:pointer}
+#filter-stale.active{color:var(--warning);border-color:var(--warning)}
+#filter-count{margin-left:auto;font-size:.75rem;color:var(--muted)}
+#graph-wrap{flex:1;position:relative;overflow:hidden}
+#canvas-svg{width:100%;height:100%}
+.node circle{stroke-width:2;transition:opacity .3s}
+.node text{font-size:11px;fill:var(--text);pointer-events:none;font-family:var(--font)}
+.node.stale circle{opacity:.35}
+.link{stroke:var(--border);stroke-opacity:.7;fill:none}
+.link.strong{stroke:var(--primary);stroke-opacity:.5}
+#map-wrap{flex:1;position:relative}
+#world-svg{width:100%;height:100%}
+.map-pin{cursor:pointer;transition:transform .15s}
+.map-pin:hover{transform:scale(1.3)}
+.cluster-badge{font-size:9px;font-weight:700;fill:white;font-family:var(--font)}
+#stats-wrap{flex:1;overflow-y:auto;padding:1.25rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;align-content:start}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1rem 1.25rem;box-shadow:var(--shadow-sm)}
+.stat-card h3{font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.75rem}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:.5rem;margin-bottom:.5rem}
+.kpi{background:var(--offset);border-radius:var(--r-md);padding:.6rem .75rem;text-align:center}
+.kpi-val{font-size:1.4rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--text)}
+.kpi-lbl{font-size:.7rem;color:var(--muted);margin-top:.2rem}
+canvas.chart-canvas{max-height:180px}
+#detail-panel{position:fixed;top:56px;right:0;bottom:0;width:320px;background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .3s cubic-bezier(0.16,1,0.3,1);z-index:200;overflow-y:auto;display:flex;flex-direction:column}
+#detail-panel.open{transform:translateX(0)}
+#panel-header{display:flex;align-items:center;gap:.5rem;padding:.9rem 1rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+#panel-close{padding:.3rem;border-radius:var(--r-sm);color:var(--muted);margin-left:auto;display:flex}
+#panel-close:hover{color:var(--text);background:var(--dynamic)}
+#panel-name{font-size:1rem;font-weight:600;flex:1}
+#panel-body{padding:1rem;display:flex;flex-direction:column;gap:.75rem}
+.detail-row{display:flex;flex-direction:column;gap:.15rem}
+.detail-label{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.detail-value{font-size:.82rem;color:var(--text);word-break:break-word}
+.detail-value a{color:var(--primary);text-decoration:none}
+.detail-value a:hover{text-decoration:underline}
+.tag-row{display:flex;flex-wrap:wrap;gap:.25rem}
+.tag{background:var(--primary-hl);color:var(--primary);border-radius:var(--r-full);padding:.15rem .55rem;font-size:.7rem;font-weight:500}
+.strength-bar{height:6px;border-radius:var(--r-full);background:var(--offset2);overflow:hidden;margin-top:.25rem}
+.strength-fill{height:100%;border-radius:var(--r-full);background:var(--primary);transition:width .5s cubic-bezier(0.16,1,0.3,1)}
+#loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:500;transition:opacity .4s}
+#loading-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-msg{font-size:.85rem;color:var(--muted)}
+#error-banner{display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);background:var(--error);color:#fff;padding:.5rem 1rem;border-radius:var(--r-md);font-size:.82rem;z-index:300;max-width:500px;text-align:center}
+#map-tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:.5rem .75rem;font-size:.78rem;pointer-events:none;box-shadow:var(--shadow-md);z-index:250;display:none;max-width:200px}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--r-full)}
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-msg">Connecting to Notion…</div>
+</div>
+<div id="error-banner"></div>
+<div id="map-tooltip"></div>
+
+<div id="app">
+  <div id="topbar">
+    <div id="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
+        <line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/><line x1="5" y1="17" x2="19" y2="17"/>
+      </svg>
+      People Network
+    </div>
+    <div id="nav-tabs">
+      <button class="tab-btn active" data-view="graph"><i data-lucide="share-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px"></i>Mindmap</button>
+      <button class="tab-btn" data-view="map"><i data-lucide="map-pin" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px"></i>World Map</button>
+      <button class="tab-btn" data-view="stats"><i data-lucide="bar-chart-2" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px"></i>Stats</button>
+    </div>
+    <div id="topbar-right">
+      <div id="status-dot" title="Data status"></div>
+      <button id="refresh-btn" title="Refresh data"><i data-lucide="refresh-cw" style="width:16px;height:16px"></i></button>
+      <button id="theme-btn" data-theme-toggle title="Toggle theme"><i data-lucide="sun" style="width:16px;height:16px"></i></button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="view-graph" class="view active">
+      <div id="filter-bar">
+        <select id="f-category" class="filter-select"><option value="">All Categories</option></select>
+        <select id="f-layer" class="filter-select"><option value="">All Layers</option></select>
+        <select id="f-tags" class="filter-select"><option value="">All Tags</option></select>
+        <select id="f-industry" class="filter-select"><option value="">All Industries</option></select>
+        <label id="filter-stale">
+          <input type="checkbox" id="f-stale"> Re-engage (60+ days)
+        </label>
+        <span id="filter-count"></span>
+      </div>
+      <div id="graph-wrap">
+        <svg id="canvas-svg"></svg>
+      </div>
+    </div>
+
+    <div id="view-map" class="view">
+      <svg id="world-svg"></svg>
+    </div>
+
+    <div id="view-stats" class="view">
+      <div id="stats-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<div id="detail-panel" role="dialog" aria-label="Contact details">
+  <div id="panel-header">
+    <div id="panel-name"></div>
+    <button id="panel-close" aria-label="Close panel"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+  </div>
+  <div id="panel-body"></div>
+</div>
+
+<script>
+let ALL_PEOPLE = [];
+let filteredPeople = [];
+let simulation = null;
+let chartInstances = {};
+const STALE_DAYS = 60;
+const CAT_COLORS = {
+  'Trading': 'var(--blue)',
+  'Professional': 'var(--primary)',
+  'Personal': 'var(--success)',
+  'Family': 'var(--warning)',
+  'Acquaintance': 'var(--muted)',
+};
+const CAT_COLOR_DEFAULT = 'var(--faint)';
+
+function catColor(cats){
+  if (!cats || !cats.length) return CAT_COLOR_DEFAULT;
+  return CAT_COLORS[cats[0]] || CAT_COLOR_DEFAULT;
+}
+
+function daysSince(dateStr){
+  if (!dateStr) return null;
+  return (Date.now() - new Date(dateStr).getTime()) / 86400000;
+}
+function isStale(person){
+  const d = daysSince(person.lastContacted);
+  return d !== null && d >= STALE_DAYS;
+}
+
+(function(){
+  const btn = document.getElementById('theme-btn');
+  const html = document.documentElement;
+  let mode = html.getAttribute('data-theme') || 'dark';
+  function setTheme(m){
+    mode = m;
+    html.setAttribute('data-theme', m);
+    btn.innerHTML = m === 'dark'
+      ? '<i data-lucide="sun" style="width:16px;height:16px"></i>'
+      : '<i data-lucide="moon" style="width:16px;height:16px"></i>';
+    lucide.createIcons();
+  }
+  setTheme(mode);
+  btn.addEventListener('click', () => setTheme(mode === 'dark' ? 'light' : 'dark'));
+})();
+
+async function fetchData(){
+  setStatus('loading');
+  showLoading('Fetching from Notion…');
+  try {
+    const res = await fetch('/api/notion');
+    if (!res.ok){
+      const e = await res.json();
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    ALL_PEOPLE = data.people || [];
+    setStatus('ok');
+    hideLoading();
+    populateFilters();
+    applyFilters();
+    if (chartInstances) destroyCharts();
+    renderStats();
+    renderMap();
+  } catch(err){
+    setStatus('err');
+    hideLoading();
+    showError('Failed to load: ' + err.message);
+  }
+}
+
+function setStatus(s){
+  const dot = document.getElementById('status-dot');
+  dot.className = s === 'loading' ? 'loading' : s === 'ok' ? 'ok' : 'err';
+}
+function showLoading(msg){
+  const o = document.getElementById('loading-overlay');
+  document.getElementById('loading-msg').textContent = msg;
+  o.classList.remove('hidden');
+}
+function hideLoading(){
+  document.getElementById('loading-overlay').classList.add('hidden');
+}
+function showError(msg){
+  const b = document.getElementById('error-banner');
+  b.textContent = msg;
+  b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 6000);
+}
+
+function populateFilters(){
+  const cats = new Set(), layers = new Set(), tags = new Set(), industries = new Set();
+  ALL_PEOPLE.forEach(p => {
+    p.category.forEach(c => cats.add(c));
+    if (p.layer) layers.add(p.layer);
+    p.tags.forEach(t => tags.add(t));
+    p.industrySector.forEach(i => industries.add(i));
+  });
+  fillSelect('f-category', [...cats].sort(), 'All Categories');
+  fillSelect('f-layer', [...layers].sort(), 'All Layers');
+  fillSelect('f-tags', [...tags].sort(), 'All Tags');
+  fillSelect('f-industry', [...industries].sort(), 'All Industries');
+}
+function fillSelect(id, options, placeholder){
+  const sel = document.getElementById(id);
+  sel.innerHTML = `<option value="">${placeholder}</option>` +
+    options.map(o => `<option value="${o}">${o}</option>`).join('');
+}
+
+function applyFilters(){
+  const cat = document.getElementById('f-category').value;
+  const layer = document.getElementById('f-layer').value;
+  const tag = document.getElementById('f-tags').value;
+  const ind = document.getElementById('f-industry').value;
+  const stale = document.getElementById('f-stale').checked;
+
+  filteredPeople = ALL_PEOPLE.filter(p => {
+    if (cat && !p.category.includes(cat)) return false;
+    if (layer && p.layer !== layer) return false;
+    if (tag && !p.tags.includes(tag)) return false;
+    if (ind && !p.industrySector.includes(ind)) return false;
+    if (stale && !isStale(p)) return false;
+    return true;
+  });
+
+  document.getElementById('filter-count').textContent =
+    `${filteredPeople.length} / ${ALL_PEOPLE.length} contacts`;
+
+  renderGraph();
+}
+
+['f-category','f-layer','f-tags','f-industry'].forEach(id =>
+  document.getElementById(id).addEventListener('change', applyFilters));
+document.getElementById('f-stale').addEventListener('change', function(){
+  document.getElementById('filter-stale').classList.toggle('active', this.checked);
+  applyFilters();
+});
+
+function renderGraph(){
+  const wrap = document.getElementById('graph-wrap');
+  const svg = d3.select('#canvas-svg');
+  svg.selectAll('*').remove();
+  if (simulation) simulation.stop();
+
+  const W = wrap.offsetWidth || wrap.clientWidth || 800;
+  const H = wrap.offsetHeight || wrap.clientHeight || 600;
+
+  if (W === 0 || H === 0){
+    requestAnimationFrame(renderGraph);
+    return;
+  }
+
+  const filteredIds = new Set(filteredPeople.map(p => p.id));
+  const nodes = filteredPeople.map(p => ({...p}));
+
+  const links = [];
+  filteredPeople.forEach(p => {
+    p.connectedTo.forEach(targetId => {
+      if (filteredIds.has(targetId)){
+        links.push({ source: p.id, target: targetId, strong: (p.relationshipStrength || 0) >= 7 });
+      }
+    });
+  });
+
+  const zoom = d3.zoom().scaleExtent([0.2, 4])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const g = svg.append('g');
+
+  const link = g.append('g').selectAll('line')
+    .data(links).join('line')
+    .attr('class', d => 'link' + (d.strong ? ' strong' : ''));
+
+  const node = g.append('g').selectAll('g')
+    .data(nodes, d => d.id)
+    .join('g')
+    .attr('class', d => 'node' + (isStale(d) ? ' stale' : ''))
+    .call(d3.drag()
+      .on('start', (e,d) => { if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag', (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end', (e,d) => { if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
+    .on('click', (e,d) => { e.stopPropagation(); openPanel(d); });
+
+  node.append('circle')
+    .attr('r', d => 6 + (d.relationshipStrength || 3) * 1.8)
+    .attr('fill', d => catColor(d.category))
+    .attr('fill-opacity', 0.85)
+    .attr('stroke', d => catColor(d.category))
+    .attr('stroke-opacity', 0.4);
+
+  node.append('text')
+    .text(d => d.name || 'Unnamed')
+    .attr('dy', d => 8 + (d.relationshipStrength || 3) * 1.8 + 3)
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '11px');
+
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(80).strength(0.3))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(d => 10 + (d.relationshipStrength || 3) * 2))
+    .on('tick', () => {
+      link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+  svg.on('click', () => closePanel());
+}
+
+async function renderMap(){
+  const svg = d3.select('#world-svg');
+  svg.selectAll('*').remove();
+
+  const wrap = document.getElementById('main');
+  const W = wrap.offsetWidth || 900;
+  const H = wrap.offsetHeight || 500;
+
+  const projection = d3.geoNaturalEarth1()
+    .scale(W / 6.4)
+    .translate([W/2, H/2]);
+  const path = d3.geoPath().projection(projection);
+
+  svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+  let worldData;
+  try {
+    const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    worldData = await r.json();
+  } catch(e){
+    svg.append('text').attr('x', W/2).attr('y', H/2)
+       .attr('text-anchor','middle').attr('fill','var(--muted)')
+       .text('Map data unavailable');
+    return;
+  }
+
+  const countries = topojson_feature(worldData, worldData.objects.countries);
+
+  const zoom = d3.zoom().scaleExtent([1, 12])
+    .on('zoom', e => mapG.attr('transform', e.transform));
+  svg.call(zoom);
+
+  const mapG = svg.append('g');
+
+  mapG.append('rect').attr('width', W).attr('height', H)
+    .attr('fill', 'var(--offset)');
+
+  mapG.append('g').selectAll('path')
+    .data(countries.features).join('path')
+    .attr('d', path)
+    .attr('fill', 'var(--surface2)')
+    .attr('stroke', 'var(--border)')
+    .attr('stroke-width', 0.5);
+
+  const geocoded = ALL_PEOPLE
+    .filter(p => p.city || p.country)
+    .map(p => {
+      const coords = geocodeCity(p.city, p.country);
+      if (!coords) return null;
+      return { person: p, coords };
+    })
+    .filter(Boolean);
+
+  const clusters = {};
+  geocoded.forEach(({person, coords}) => {
+    const key = `${Math.round(coords[0]/2)*2},${Math.round(coords[1]/2)*2}`;
+    if (!clusters[key]) clusters[key] = { coords, people: [] };
+    clusters[key].people.push(person);
+  });
+
+  const tooltip = document.getElementById('map-tooltip');
+
+  Object.values(clusters).forEach(cluster => {
+    const [lng, lat] = cluster.coords;
+    const [px, py] = projection([lng, lat]) || [null, null];
+    if (px === null) return;
+
+    const g = mapG.append('g')
+      .attr('class', 'map-pin')
+      .attr('transform', `translate(${px},${py})`);
+
+    const r = cluster.people.length > 1 ? 10 : 7;
+
+    g.append('circle')
+      .attr('r', r).attr('fill', 'var(--primary)').attr('fill-opacity', 0.85)
+      .attr('stroke', 'var(--surface)').attr('stroke-width', 1.5);
+
+    if (cluster.people.length > 1){
+      g.append('text').attr('class','cluster-badge')
+        .attr('text-anchor','middle').attr('dy','0.35em')
+        .text(cluster.people.length);
+    }
+
+    g.on('mousemove', (e) => {
+      const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
+      const more = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
+      tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 12) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+    }).on('mouseleave', () => tooltip.style.display = 'none')
+      .on('click', (e) => {
+        e.stopPropagation();
+        if (cluster.people.length === 1) openPanel(cluster.people[0]);
+        else openClusterPanel(cluster.people);
+      });
+  });
+
+  svg.on('click', () => closePanel());
+}
+
+function geocodeCity(city, country){
+  const CL = city ? city.toLowerCase() : '';
+  const CO = country ? country.toLowerCase() : '';
+
+  const CITY_MAP = {
+    'singapore':[103.82,1.35],
+    'dubai':[55.3,25.2],'abu dhabi':[54.37,24.47],
+    'london':[-0.12,51.51],'new york':[-74.0,40.71],'los angeles':[-118.24,34.05],
+    'san francisco':[-122.42,37.77],'chicago':[-87.63,41.88],
+    'tokyo':[139.69,35.69],'shanghai':[121.47,31.23],'beijing':[116.4,39.9],
+    'hong kong':[114.17,22.32],'sydney':[151.2,-33.87],'melbourne':[144.96,-37.81],
+    'paris':[2.35,48.85],'berlin':[13.4,52.52],'amsterdam':[4.9,52.37],
+    'zurich':[8.54,47.37],'frankfurt':[8.68,50.11],'madrid':[-3.7,40.42],
+    'mumbai':[72.88,19.07],'delhi':[77.21,28.63],'bangalore':[77.59,12.97],
+    'kuala lumpur':[101.69,3.14],'jakarta':[106.84,-6.21],'bangkok':[100.52,13.75],
+    'seoul':[126.98,37.56],'taipei':[121.56,25.04],'manila':[120.98,14.6],
+    'toronto':[-79.38,43.65],'vancouver':[-123.12,49.28],'montreal':[-73.55,45.5],
+    'sao paulo':[-46.63,-23.55],'buenos aires':[-58.38,-34.61],'bogota':[-74.08,4.71],
+    'cairo':[31.24,30.04],'johannesburg':[28.03,-26.2],'lagos':[3.4,6.45],
+    'nairobi':[36.82,-1.29],'istanbul':[29.0,41.01],'moscow':[37.62,55.76],
+  };
+
+  const COUNTRY_MAP = {
+    'singapore':[103.82,1.35],'uae':[54.37,23.42],'united arab emirates':[54.37,23.42],
+    'uk':[-1.5,52],'united kingdom':[-1.5,52],'usa':[-98.58,39.83],
+    'united states':[-98.58,39.83],'australia':[133.78,-25.27],'japan':[138.25,36.2],
+    'china':[104.2,35.86],'india':[78.96,20.59],'germany':[10.45,51.17],
+    'france':[2.35,46.23],'canada':[-96.8,56.13],'brazil':[-47.93,-15.78],
+    'malaysia':[101.97,4.21],'indonesia':[113.92,-0.79],'thailand':[100.99,15.87],
+    'south korea':[127.77,35.91],'hong kong':[114.17,22.32],'taiwan':[120.96,23.69],
+    'philippines':[121.77,12.88],'vietnam':[102.5,12.57],'south africa':[25.08,-29.0],
+    'nigeria':[8.68,9.08],'kenya':[37.9,0.02],'egypt':[30.8,26.82],
+    'turkey':[35.24,38.96],'russia':[105.32,61.52],'netherlands':[5.29,52.13],
+    'switzerland':[8.23,46.82],'spain':[-3.75,40.46],'italy':[12.57,41.87],
+  };
+
+  if (CL && CITY_MAP[CL]) return CITY_MAP[CL];
+  if (CO && COUNTRY_MAP[CO]) return COUNTRY_MAP[CO];
+  return null;
+}
+
+function topojson_feature(topology, object){
+  function arc(i){
+    const a = topology.arcs[i < 0 ? ~i : i];
+    let x=0, y=0;
+    const pts = a.map(([dx,dy]) => {
+      x += dx; y += dy;
+      const scale = topology.transform.scale;
+      const translate = topology.transform.translate;
+      return [x*scale[0]+translate[0], y*scale[1]+translate[1]];
+    });
+    return i < 0 ? pts.reverse() : pts;
+  }
+  function ring(arcs){ return arcs.flatMap(i => arc(i)); }
+  function poly(arcs){ return { type:'Polygon', coordinates: arcs.map(ring) }; }
+  function mpoly(arcs){ return { type:'MultiPolygon', coordinates: arcs.map(r => r.map(ring)) }; }
+
+  const features = object.geometries.map(g => ({
+    type:'Feature',
+    id: g.id,
+    properties: g.properties || {},
+    geometry: g.type === 'Polygon' ? poly(g.arcs) : g.type === 'MultiPolygon' ? mpoly(g.arcs) : null,
+  }));
+  return { type:'FeatureCollection', features };
+}
+
+function destroyCharts(){
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+}
+
+function renderStats(){
+  const wrap = document.getElementById('stats-wrap');
+  wrap.innerHTML = '';
+  if (!ALL_PEOPLE.length){
+    wrap.innerHTML = '<div style="color:var(--muted);padding:2rem;grid-column:1/-1">No data loaded.</div>';
+    return;
+  }
+
+  const people = ALL_PEOPLE;
+  const total = people.length;
+  const stale = people.filter(isStale).length;
+  const clients = people.filter(p => p.clientStatus === 'Already Client').length;
+  const potential = people.filter(p => p.clientStatus === 'Potential Client').length;
+  const avgStrength = (people.reduce((s,p) => s + (p.relationshipStrength||0), 0) / total).toFixed(1);
+
+  const kpiCard = document.createElement('div');
+  kpiCard.className = 'stat-card';
+  kpiCard.innerHTML = `<h3>Overview</h3><div class="kpi-grid">
+    ${kpi(total,'Total')}${kpi(clients,'Clients')}${kpi(potential,'Potential')}${kpi(stale,'Re-engage','var(--warning)')}${kpi(avgStrength,'Avg Strength')}
+  </div>`;
+  wrap.appendChild(kpiCard);
+
+  addPieChart(wrap, 'By Category', count(people, p => p.category[0] || 'Other'), Object.values(CAT_COLORS));
+  addPieChart(wrap, 'By Layer', count(people, p => p.layer || 'Unknown'), ['var(--primary)', 'var(--muted)']);
+  addBarChart(wrap, 'By Industry / Sector', count(people, p => p.industrySector[0] || 'Other'), 'var(--blue)');
+  addPieChart(wrap, 'Client Status', count(people, p => p.clientStatus || 'N/A'), ['var(--success)', 'var(--warning)', 'var(--error)', 'var(--faint)']);
+
+  const tagCounts = {};
+  people.forEach(p => p.tags.forEach(t => tagCounts[t] = (tagCounts[t]||0)+1));
+  addBarChart(wrap, 'By Tags', tagCounts, 'var(--purple)');
+  addBarChart(wrap, 'Last Contacted (months)', countByMonth(people), 'var(--primary)');
+}
+
+function kpi(val, lbl, color){
+  return `<div class="kpi"><div class="kpi-val" style="color:${color||'var(--text)'}">${val}</div><div class="kpi-lbl">${lbl}</div></div>`;
+}
+function count(arr, fn){
+  const out = {};
+  arr.forEach(p => { const k = fn(p); out[k] = (out[k]||0)+1; });
+  return out;
+}
+function countByMonth(people){
+  const now = new Date();
+  const out = {};
+  for(let i=5;i>=0;i--){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = d.toLocaleString('default',{month:'short',year:'2-digit'});
+    out[key] = 0;
+  }
+  people.forEach(p => {
+    if(!p.lastContacted) return;
+    const d = new Date(p.lastContacted);
+    const key = d.toLocaleString('default',{month:'short',year:'2-digit'});
+    if(key in out) out[key]++;
+  });
+  return out;
+}
+function cssVar(v){
+  return getComputedStyle(document.documentElement).getPropertyValue(v.replace('var(','').replace(')','').trim()).trim() || v;
+}
+
+function addPieChart(wrap, title, data, colors){
+  const card = document.createElement('div');
+  card.className = 'stat-card';
+  const id = 'chart-' + Math.random().toString(36).slice(2);
+  card.innerHTML = `<h3>${title}</h3><canvas id="${id}" class="chart-canvas"></canvas>`;
+  wrap.appendChild(card);
+
+  const labels = Object.keys(data);
+  const values = Object.values(data);
+  const bgColors = colors.map(c => cssVar(c) || c);
+
+  chartInstances[id] = new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { labels, datasets:[{ data: values, backgroundColor: bgColors, borderWidth: 0 }] },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      plugins:{ legend:{ position:'right', labels:{ color: cssVar('--text'), font:{size:11}, boxWidth:12, padding:8 } } },
+      animation:{ duration:600 },
+    }
+  });
+}
+
+function addBarChart(wrap, title, data, color){
+  const card = document.createElement('div');
+  card.className = 'stat-card';
+  const id = 'chart-' + Math.random().toString(36).slice(2);
+  card.innerHTML = `<h3>${title}</h3><canvas id="${id}" class="chart-canvas"></canvas>`;
+  wrap.appendChild(card);
+
+  const labels = Object.keys(data);
+  const values = Object.values(data);
+  const bg = cssVar(color) || color;
+
+  chartInstances[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels, datasets:[{ data: values, backgroundColor: bg + 'cc', borderRadius: 4, borderSkipped: false }] },
+    options: {
+      responsive:true, maintainAspectRatio:true, indexAxis:'y',
+      plugins:{ legend:{ display:false } },
+      scales:{
+        x:{ ticks:{ color:cssVar('--muted'), font:{size:10} }, grid:{ color: cssVar('--divider') } },
+        y:{ ticks:{ color:cssVar('--muted'), font:{size:10} }, grid:{ display:false } },
+      },
+      animation:{ duration:600 },
+    }
+  });
+}
+
+function openPanel(person){
+  const panel = document.getElementById('detail-panel');
+  document.getElementById('panel-name').textContent = person.name || 'Unknown';
+  const body = document.getElementById('panel-body');
+  body.innerHTML = '';
+
+  const rows = [
+    ['Category', person.category.join(', ')],
+    ['Layer', person.layer],
+    ['Relationship Strength', person.relationshipStrength !== null ? `${person.relationshipStrength}/10` : null],
+    ['Client Status', person.clientStatus],
+    ['Client Probability', person.clientProbability !== null ? `${Math.round(person.clientProbability * 100)}%` : null],
+    ['Industry', person.industrySector.join(', ')],
+    ['Location', [person.city, person.country].filter(Boolean).join(', ')],
+    ['Last Contacted', person.lastContacted],
+    ['Date Met', person.dateMet],
+    ['Met Via', person.metVia],
+    ['Email', person.email ? `<a href="mailto:${person.email}">${person.email}</a>` : null],
+    ['Phone', person.phone ? `<a href="tel:${person.phone}">${person.phone}</a>` : null],
+    ['LinkedIn', person.linkedin ? `<a href="${person.linkedin}" target="_blank" rel="noopener">View Profile</a>` : null],
+    ['Notes', person.notes],
+  ];
+
+  rows.forEach(([label, value]) => {
+    if (!value && value !== 0) return;
+    const div = document.createElement('div');
+    div.className = 'detail-row';
+    div.innerHTML = `<div class="detail-label">${label}</div><div class="detail-value">${value}</div>`;
+    body.appendChild(div);
+  });
+
+  if (person.relationshipStrength !== null){
+    const lastRow = body.querySelector('.detail-row:nth-child(3)');
+    if (lastRow){
+      lastRow.innerHTML += `<div class="strength-bar"><div class="strength-fill" style="width:${person.relationshipStrength*10}%"></div></div>`;
+    }
+  }
+
+  if (person.tags.length){
+    const div = document.createElement('div');
+    div.className = 'detail-row';
+    div.innerHTML = `<div class="detail-label">Tags</div><div class="tag-row">${person.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+    body.appendChild(div);
+  }
+
+  if (isStale(person)){
+    const days = Math.round(daysSince(person.lastContacted));
+    const div = document.createElement('div');
+    div.style.cssText = 'background:var(--offset2);border-radius:var(--r-md);padding:.6rem .75rem;font-size:.78rem;color:var(--warning);margin-top:.25rem';
+    div.textContent = `⚠ Last contacted ${days} days ago — time to reconnect!`;
+    body.appendChild(div);
+  }
+
+  const connected = ALL_PEOPLE.filter(p =>
+    person.connectedTo.includes(p.id) || person.connectedFrom.includes(p.id));
+  if (connected.length){
+    const div = document.createElement('div');
+    div.className = 'detail-row';
+    div.innerHTML = `<div class="detail-label">Connected To (${connected.length})</div>
+      <div class="detail-value">${connected.map(p=>`<a href="#" onclick="return false;" data-id="${p.id}">${p.name}</a>`).join(', ')}</div>`;
+    div.querySelectorAll('a[data-id]').forEach(a =>
+      a.addEventListener('click', () => {
+        const target = ALL_PEOPLE.find(p => p.id === a.dataset.id);
+        if (target) openPanel(target);
+      }));
+    body.appendChild(div);
+  }
+
+  panel.classList.add('open');
+  lucide.createIcons();
+}
+
+function openClusterPanel(people){
+  const panel = document.getElementById('detail-panel');
+  document.getElementById('panel-name').textContent = `${people[0].city || people[0].country} (${people.length})`;
+  const body = document.getElementById('panel-body');
+  body.innerHTML = '';
+  people.forEach(p => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:.5rem .75rem;background:var(--offset);border-radius:var(--r-md);cursor:pointer;font-size:.85rem;';
+    div.textContent = p.name;
+    div.addEventListener('click', () => openPanel(p));
+    body.appendChild(div);
+  });
+  panel.classList.add('open');
+}
+
+function closePanel(){
+  document.getElementById('detail-panel').classList.remove('open');
+}
+document.getElementById('panel-close').addEventListener('click', closePanel);
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    btn.classList.add('active');
+    const viewId = 'view-' + btn.dataset.view;
+    document.getElementById(viewId).classList.add('active');
+    closePanel();
+
+    if (btn.dataset.view === 'graph') {
+      requestAnimationFrame(renderGraph);
+    }
+    if (btn.dataset.view === 'map'){
+      requestAnimationFrame(renderMap);
+    }
+  });
+});
+
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  destroyCharts();
+  fetchData();
+});
+
+const resizeObserver = new ResizeObserver(() => {
+  const activeView = document.querySelector('.view.active');
+  if (!activeView) return;
+  if (activeView.id === 'view-graph') renderGraph();
+  if (activeView.id === 'view-map') renderMap();
+});
+resizeObserver.observe(document.getElementById('main'));
+
+lucide.createIcons();
+fetchData();
+</script>
+</body>
+</html>
