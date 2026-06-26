@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         notes:                text(p['Notes']),
         industrySector:       multi(p['Industry / Sector']),
         lastContacted:        dt(p['Last Contacted']),
-        city:                 text(p['City ']),
+        city:                 text(p['City']),
         country:              text(p['Country']),
         dateMet:              dt(p['Date Met']),
         tags:                 multi(p['Tags']),
