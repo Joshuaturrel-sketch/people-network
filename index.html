@@ -109,8 +109,8 @@ canvas.chart-canvas{max-height:180px}
 @keyframes spin{to{transform:rotate(360deg)}}
 #loading-msg{font-size:.85rem;color:var(--muted)}
 #error-banner{display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);background:var(--error);color:#fff;padding:.5rem 1rem;border-radius:var(--r-md);font-size:.82rem;z-index:300;max-width:500px;text-align:center}
-#map-tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:.5rem .75rem;font-size:.78rem;pointer-events:none;box-shadow:var(--shadow-md);z-index:250;display:none;max-width:200px}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:var(--r-full)}
+#main{position:relative;overflow:hidden}
+#map-tooltip{position:absolute;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:.5rem .75rem;font-size:.78rem;pointer-events:none;box-shadow:var(--shadow-md);z-index:250;display:none;max-width:200px}
 </style>
 </head>
 <body>
@@ -407,7 +407,6 @@ function renderGraph(){
   svg.on('click', () => closePanel());
 }
 
-// ═══════════════════════════════════════════════════════════════
 //  VIEW 2 — WORLD MAP
 // ═══════════════════════════════════════════════════════════════
 async function renderMap(){
@@ -457,6 +456,7 @@ async function renderMap(){
   });
 
   const tooltip = document.getElementById('map-tooltip');
+  const wrapRect = wrap.getBoundingClientRect();
 
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
@@ -482,8 +482,8 @@ async function renderMap(){
       const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
       tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
       tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX+12)+'px';
-      tooltip.style.top  = (e.clientY-10)+'px';
+      tooltip.style.left = (e.clientX - wrapRect.left + 12) + 'px';
+      tooltip.style.top  = (e.clientY - wrapRect.top - 10) + 'px';
     }).on('mouseleave', () => tooltip.style.display = 'none')
       .on('click', (e) => {
         e.stopPropagation();
