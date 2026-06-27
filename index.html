@@ -453,7 +453,12 @@ async function renderMap(){
     clusters[key].people.push(person);
   });
 
-  const tooltip = document.getElementById('map-tooltip');
+  const tooltip = d3.select('body')
+    .append('div')
+    .attr('id', 'map-tooltip')
+    .style('position', 'fixed')
+    .style('display', 'none')
+    .style('pointer-events', 'none');
 
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
@@ -474,23 +479,24 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
-    g.on('mouseenter', () => {
+    g.on('mouseenter', (e) => {
       const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
       const names = cluster.people.map(p => p.name).join('<br>');
-      const more  = cluster.people.length > 12
-        ? `<br>+${cluster.people.length - 12} more`
-        : '';
-      tooltip.innerHTML = `<strong>${title}</strong><br>${names}${more}`;
-      tooltip.style.display = 'block';
+      const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
+      tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
+        .style('display', 'block')
+        .style('left', (e.clientX + 14) + 'px')
+        .style('top', (e.clientY + 14) + 'px');
     });
 
     g.on('mousemove', (e) => {
-      tooltip.style.left = (e.pageX + 14) + 'px';
-      tooltip.style.top  = (e.pageY + 14) + 'px';
+      tooltip
+        .style('left', (e.clientX + 14) + 'px')
+        .style('top', (e.clientY + 14) + 'px');
     });
 
     g.on('mouseleave', () => {
-      tooltip.style.display = 'none';
+      tooltip.style('display', 'none');
     });
 
     g.on('click', (e) => {
@@ -502,7 +508,6 @@ async function renderMap(){
 
   svg.on('click', () => closePanel());
 }
-
 function geocodeCity(city, country){
   const CL = city    ? city.toLowerCase()    : '';
   const CO = country ? country.toLowerCase() : '';
