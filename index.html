@@ -478,18 +478,13 @@ async function renderMap(){
     }
 
     g.on('mousemove', (e) => {
-  const wrapRect = wrap.getBoundingClientRect();
   const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
   const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
   tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
   tooltip.style.display = 'block';
-
-  const x = px + 14;
-  const y = py - 10;
-
-  tooltip.style.left = x + 'px';
-  tooltip.style.top = y + 'px';
-})
+  tooltip.style.left = (e.pageX + 14) + 'px';
+  tooltip.style.top  = (e.pageY + 14) + 'px';
+}).on('mouseleave', () => tooltip.style.display = 'none')
 
   svg.on('click', () => closePanel());
 }
