@@ -433,19 +433,20 @@ async function renderMap(){
   const zoom = d3.zoom().scaleExtent([1,12]).on('zoom', e => mapG.attr('transform', e.transform));
   svg.call(zoom);
 
-  const mapG = svg.append('g');
+  const mapG = svg.append('g').attr('pointer-events', 'none');
+
   mapG.append('rect')
     .attr('width',W)
     .attr('height',H)
     .attr('fill','var(--offset)')
-    .style('pointer-events','all');
+    .attr('pointer-events','none');
 
   mapG.append('g').selectAll('path').data(countries.features).join('path')
     .attr('d', path)
     .attr('fill','var(--surface2)')
     .attr('stroke','var(--border)')
     .attr('stroke-width', 0.5)
-    .style('pointer-events','none');
+    .attr('pointer-events','none');
 
   const geocoded = ALL_PEOPLE
     .filter(p => p.city || p.country)
@@ -459,18 +460,24 @@ async function renderMap(){
     clusters[key].people.push(person);
   });
 
+  const tooltip = d3.select('body')
+    .append('div')
+    .attr('id', 'map-tooltip')
+    .style('position', 'fixed')
+    .style('display', 'none')
+    .style('pointer-events', 'none');
+
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
     const proj = projection([lng, lat]);
     if (!proj) return;
     const [px, py] = proj;
     const size = cluster.people.length > 1 ? 28 : 22;
-    const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
-    const text = [title, ...cluster.people.map(p => p.name)].join('\n');
 
-    const g = mapG.append('g')
+    const g = svg.append('g')
       .attr('class','map-pin')
-      .attr('transform',`translate(${px},${py})`);
+      .attr('transform',`translate(${px},${py})`)
+      .style('pointer-events', 'all');
 
     g.append('rect')
       .attr('x', -size/2)
@@ -495,7 +502,18 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
-    g.append('title').text(text);
+    const showTooltip = (event) => {
+      const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
+      const names = cluster.people.map(p => p.name).join('<br>');
+      tooltip.html(`<strong>${title}</strong><br>${names}`)
+        .style('display', 'block')
+        .style('left', (event.clientX + 14) + 'px')
+        .style('top', (event.clientY + 14) + 'px');
+    };
+
+    g.on('mouseenter', showTooltip);
+    g.on('mousemove', showTooltip);
+    g.on('mouseleave', () => tooltip.style('display', 'none'));
 
     g.on('click', (e) => {
       e.stopPropagation();
