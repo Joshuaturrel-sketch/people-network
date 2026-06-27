@@ -483,9 +483,13 @@ async function renderMap(){
   const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
   tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
   tooltip.style.display = 'block';
-  tooltip.style.left = (e.clientX - wrapRect.left + 14) + 'px';
-  tooltip.style.top  = (e.clientY - wrapRect.top + 14) + 'px';
-}).on('mouseleave', () => tooltip.style.display = 'none')
+
+  const x = px + 14;
+  const y = py - 10;
+
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+})
 
   svg.on('click', () => closePanel());
 }
