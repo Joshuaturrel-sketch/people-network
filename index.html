@@ -478,19 +478,14 @@ async function renderMap(){
     }
 
     g.on('mousemove', (e) => {
-      const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
-      const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
-      tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
-      tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX - wrapRect.left + 12) + 'px';
-      tooltip.style.top  = (e.clientY - wrapRect.top - 10) + 'px';
-    }).on('mouseleave', () => tooltip.style.display = 'none')
-      .on('click', (e) => {
-        e.stopPropagation();
-        if (cluster.people.length === 1) openPanel(cluster.people[0]);
-        else openClusterPanel(cluster.people);
-      });
-  });
+  const wrapRect = wrap.getBoundingClientRect();
+  const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
+  const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
+  tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
+  tooltip.style.display = 'block';
+  tooltip.style.left = (e.clientX - wrapRect.left + 14) + 'px';
+  tooltip.style.top  = (e.clientY - wrapRect.top + 14) + 'px';
+}).on('mouseleave', () => tooltip.style.display = 'none')
 
   svg.on('click', () => closePanel());
 }
