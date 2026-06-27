@@ -434,12 +434,18 @@ async function renderMap(){
   svg.call(zoom);
 
   const mapG = svg.append('g');
-  mapG.append('rect').attr('width',W).attr('height',H).attr('fill','var(--offset)');
+  mapG.append('rect')
+    .attr('width',W)
+    .attr('height',H)
+    .attr('fill','var(--offset)')
+    .style('pointer-events','all');
+
   mapG.append('g').selectAll('path').data(countries.features).join('path')
     .attr('d', path)
     .attr('fill','var(--surface2)')
     .attr('stroke','var(--border)')
-    .attr('stroke-width', 0.5);
+    .attr('stroke-width', 0.5)
+    .style('pointer-events','none');
 
   const geocoded = ALL_PEOPLE
     .filter(p => p.city || p.country)
@@ -460,6 +466,16 @@ async function renderMap(){
     .style('display', 'none')
     .style('pointer-events', 'none');
 
+  const showTooltip = (event, cluster) => {
+    const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
+    const names = cluster.people.map(p => p.name).join('<br>');
+    const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
+    tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
+      .style('display', 'block')
+      .style('left', (event.clientX + 14) + 'px')
+      .style('top', (event.clientY + 14) + 'px');
+  };
+
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
     const proj = projection([lng, lat]);
@@ -469,12 +485,10 @@ async function renderMap(){
     const g = mapG.append('g')
       .attr('class','map-pin')
       .attr('transform',`translate(${px},${py})`)
-      .style('pointer-events', 'all');
-
-    const r = cluster.people.length > 1 ? 10 : 7;
+      .style('pointer-events','visiblePainted');
 
     g.append('circle')
-      .attr('r', r)
+      .attr('r', cluster.people.length > 1 ? 10 : 7)
       .attr('fill','var(--primary)')
       .attr('fill-opacity',0.85)
       .attr('stroke','var(--surface)')
@@ -488,19 +502,20 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
-    const showTooltip = (e) => {
-      const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
-      const names = cluster.people.map(p => p.name).join('<br>');
-      const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
-      tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
-        .style('display', 'block')
-        .style('left', (e.clientX + 14) + 'px')
-        .style('top', (e.clientY + 14) + 'px');
-    };
+    g.insert('circle', ':first-child')
+      .attr('r', 18)
+      .attr('fill', 'transparent')
+      .style('pointer-events', 'all');
 
-    g.on('mouseenter', showTooltip);
-    g.on('mousemove', showTooltip);
-    g.on('mouseleave', () => {
+    g.on('mouseenter', function(event) {
+      showTooltip(event, cluster);
+    });
+
+    g.on('mousemove', function(event) {
+      showTooltip(event, cluster);
+    });
+
+    g.on('mouseleave', function() {
       tooltip.style('display', 'none');
     });
 
