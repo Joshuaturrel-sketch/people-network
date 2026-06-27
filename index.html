@@ -466,26 +466,24 @@ async function renderMap(){
     .style('display', 'none')
     .style('pointer-events', 'none');
 
-  const showTooltip = (event, cluster) => {
-    const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
-    const names = cluster.people.map(p => p.name).join('<br>');
-    const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
-    tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
-      .style('display', 'block')
-      .style('left', (event.clientX + 14) + 'px')
-      .style('top', (event.clientY + 14) + 'px');
-  };
-
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
     const proj = projection([lng, lat]);
     if (!proj) return;
     const [px, py] = proj;
+    const size = cluster.people.length > 1 ? 28 : 22;
 
     const g = mapG.append('g')
       .attr('class','map-pin')
-      .attr('transform',`translate(${px},${py})`)
-      .style('pointer-events','visiblePainted');
+      .attr('transform',`translate(${px},${py})`);
+
+    g.append('rect')
+      .attr('x', -size/2)
+      .attr('y', -size/2)
+      .attr('width', size)
+      .attr('height', size)
+      .attr('fill', 'transparent')
+      .style('pointer-events', 'all');
 
     g.append('circle')
       .attr('r', cluster.people.length > 1 ? 10 : 7)
@@ -502,22 +500,19 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
-    g.insert('circle', ':first-child')
-      .attr('r', 18)
-      .attr('fill', 'transparent')
-      .style('pointer-events', 'all');
+    const showTooltip = (event) => {
+      const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
+      const names = cluster.people.map(p => p.name).join('<br>');
+      const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
+      tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
+        .style('display', 'block')
+        .style('left', (event.clientX + 14) + 'px')
+        .style('top', (event.clientY + 14) + 'px');
+    };
 
-    g.on('mouseenter', function(event) {
-      showTooltip(event, cluster);
-    });
-
-    g.on('mousemove', function(event) {
-      showTooltip(event, cluster);
-    });
-
-    g.on('mouseleave', function() {
-      tooltip.style('display', 'none');
-    });
+    g.on('mouseenter', showTooltip);
+    g.on('mousemove', showTooltip);
+    g.on('mouseleave', () => tooltip.style('display', 'none'));
 
     g.on('click', (e) => {
       e.stopPropagation();
