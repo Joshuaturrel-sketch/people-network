@@ -459,19 +459,14 @@ async function renderMap(){
     clusters[key].people.push(person);
   });
 
-  const tooltip = d3.select('body')
-    .append('div')
-    .attr('id', 'map-tooltip')
-    .style('position', 'fixed')
-    .style('display', 'none')
-    .style('pointer-events', 'none');
-
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
     const proj = projection([lng, lat]);
     if (!proj) return;
     const [px, py] = proj;
     const size = cluster.people.length > 1 ? 28 : 22;
+    const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
+    const text = [title, ...cluster.people.map(p => p.name)].join('\n');
 
     const g = mapG.append('g')
       .attr('class','map-pin')
@@ -500,19 +495,7 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
-    const showTooltip = (event) => {
-      const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
-      const names = cluster.people.map(p => p.name).join('<br>');
-      const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
-      tooltip.html(`<strong>${title}</strong><br>${names}${more}`)
-        .style('display', 'block')
-        .style('left', (event.clientX + 14) + 'px')
-        .style('top', (event.clientY + 14) + 'px');
-    };
-
-    g.on('mouseenter', showTooltip);
-    g.on('mousemove', showTooltip);
-    g.on('mouseleave', () => tooltip.style('display', 'none'));
+    g.append('title').text(text);
 
     g.on('click', (e) => {
       e.stopPropagation();
