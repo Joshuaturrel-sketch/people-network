@@ -466,20 +466,29 @@ async function renderMap(){
     if (!proj) return;
     const [px, py] = proj;
 
-    const g = mapG.append('g').attr('class','map-pin').attr('transform',`translate(${px},${py})`);
+    const g = mapG.append('g')
+      .attr('class','map-pin')
+      .attr('transform',`translate(${px},${py})`)
+      .style('pointer-events', 'all');
+
     const r = cluster.people.length > 1 ? 10 : 7;
 
     g.append('circle')
-      .attr('r', r).attr('fill','var(--primary)').attr('fill-opacity',0.85)
-      .attr('stroke','var(--surface)').attr('stroke-width',1.5);
+      .attr('r', r)
+      .attr('fill','var(--primary)')
+      .attr('fill-opacity',0.85)
+      .attr('stroke','var(--surface)')
+      .attr('stroke-width',1.5);
 
     if (cluster.people.length > 1){
-      g.append('text').attr('class','cluster-badge')
-        .attr('text-anchor','middle').attr('dy','0.35em')
+      g.append('text')
+        .attr('class','cluster-badge')
+        .attr('text-anchor','middle')
+        .attr('dy','0.35em')
         .text(cluster.people.length);
     }
 
-    g.on('mouseenter', (e) => {
+    const showTooltip = (e) => {
       const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
       const names = cluster.people.map(p => p.name).join('<br>');
       const more = cluster.people.length > 12 ? `<br>+${cluster.people.length - 12} more` : '';
@@ -487,14 +496,10 @@ async function renderMap(){
         .style('display', 'block')
         .style('left', (e.clientX + 14) + 'px')
         .style('top', (e.clientY + 14) + 'px');
-    });
+    };
 
-    g.on('mousemove', (e) => {
-      tooltip
-        .style('left', (e.clientX + 14) + 'px')
-        .style('top', (e.clientY + 14) + 'px');
-    });
-
+    g.on('mouseenter', showTooltip);
+    g.on('mousemove', showTooltip);
     g.on('mouseleave', () => {
       tooltip.style('display', 'none');
     });
