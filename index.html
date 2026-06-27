@@ -58,7 +58,6 @@ a,button,[role="button"]{transition:color var(--transition),background var(--tra
 #status-dot.ok{background:var(--success)}
 #status-dot.err{background:var(--error)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-#main{position:relative;overflow:hidden}
 .view{position:absolute;inset:0;display:none}
 .view.active{display:flex;flex-direction:column}
 #filter-bar{display:flex;align-items:center;gap:.5rem;padding:.6rem 1rem;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0;z-index:10}
@@ -110,8 +109,7 @@ canvas.chart-canvas{max-height:180px}
 #loading-msg{font-size:.85rem;color:var(--muted)}
 #error-banner{display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);background:var(--error);color:#fff;padding:.5rem 1rem;border-radius:var(--r-md);font-size:.82rem;z-index:300;max-width:500px;text-align:center}
 #main{position:relative;overflow:hidden}
-#map-tooltip{position:absolute;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:.5rem .75rem;font-size:.78rem;pointer-events:none;box-shadow:var(--shadow-md);z-index:250;display:none;max-width:200px}
-</style>
+#map-tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-md);padding:.5rem .75rem;font-size:.78rem;pointer-events:none;box-shadow:var(--shadow-md);z-index:250;display:none;max-width:200px}
 </head>
 <body>
 
@@ -456,7 +454,6 @@ async function renderMap(){
   });
 
   const tooltip = document.getElementById('map-tooltip');
-  const wrapRect = wrap.getBoundingClientRect();
 
   Object.values(clusters).forEach(cluster => {
     const [lng, lat] = cluster.coords;
@@ -477,14 +474,31 @@ async function renderMap(){
         .text(cluster.people.length);
     }
 
+    g.on('mouseenter', () => {
+      const title = cluster.people[0].city || cluster.people[0].country || 'Unknown location';
+      const names = cluster.people.map(p => p.name).join('<br>');
+      const more  = cluster.people.length > 12
+        ? `<br>+${cluster.people.length - 12} more`
+        : '';
+      tooltip.innerHTML = `<strong>${title}</strong><br>${names}${more}`;
+      tooltip.style.display = 'block';
+    });
+
     g.on('mousemove', (e) => {
-  const names = cluster.people.slice(0,5).map(p=>p.name).join('<br>');
-  const more  = cluster.people.length > 5 ? `<br>+${cluster.people.length-5} more` : '';
-  tooltip.innerHTML = `<strong>${cluster.people[0].city || cluster.people[0].country}</strong><br>${names}${more}`;
-  tooltip.style.display = 'block';
-  tooltip.style.left = (e.pageX + 14) + 'px';
-  tooltip.style.top  = (e.pageY + 14) + 'px';
-}).on('mouseleave', () => tooltip.style.display = 'none')
+      tooltip.style.left = (e.pageX + 14) + 'px';
+      tooltip.style.top  = (e.pageY + 14) + 'px';
+    });
+
+    g.on('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+
+    g.on('click', (e) => {
+      e.stopPropagation();
+      if (cluster.people.length === 1) openPanel(cluster.people[0]);
+      else openClusterPanel(cluster.people);
+    });
+  });
 
   svg.on('click', () => closePanel());
 }
