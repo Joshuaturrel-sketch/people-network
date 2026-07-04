@@ -103,6 +103,31 @@ input[type="text"] {
   cursor: grabbing;
 }
 
+.chart-card {
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card h3 {
+  margin: 0 0 12px;
+  flex: 0 0 auto;
+}
+
+.chart-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 300px;
+}
+
+.chart-box canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100%;
+}
+
 @media (max-width: 900px) {
   .topbar {
     flex-direction: column;
