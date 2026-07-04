@@ -33,8 +33,15 @@ function initTabs() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".tab").forEach(el => el.classList.remove("active"));
       document.querySelectorAll(".view").forEach(el => el.classList.remove("active"));
+
       btn.classList.add("active");
       document.getElementById(`${btn.dataset.view}-view`).classList.add("active");
+
+      if (btn.dataset.view === "stats") {
+        requestAnimationFrame(() => {
+          charts.forEach(chart => chart.resize());
+        });
+      }
     });
   });
 }
