@@ -1,6 +1,6 @@
 import { fetchPeople, fetchEdges } from "./api-client.js";
 import { normalizePerson, normalizeEdge, buildMergedEdges } from "./data-utils.js";
-import { renderStats } from "./stats.js";
+import { renderStats, charts } from "./stats.js";
 import { renderWorldMap } from "./map.js";
 import { initMindmap } from "./mindmap.js";
 
