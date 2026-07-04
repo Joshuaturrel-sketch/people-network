@@ -142,4 +142,11 @@ input[type="text"] {
   #mindmap {
     min-height: 480px;
   }
+  .chart-card {
+  height: 320px;
+}
+
+.chart-box {
+  height: 240px;
+}
 }
