@@ -1,1 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>People Network</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+  <script defer type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>People Network</h1>
+      <p class="subtle">Live from Notion</p>
+    </div>
+    <nav class="tabs">
+      <button data-view="stats" class="tab active">Stats</button>
+      <button data-view="map" class="tab">World Map</button>
+      <button data-view="mindmap" class="tab">Mindmap</button>
+    </nav>
+  </header>
 
+  <main class="app-shell">
+    <section id="stats-view" class="view active">
+      <div id="kpis" class="kpi-grid"></div>
+      <div class="chart-grid">
+        <div class="card"><h3>Contacts by Category</h3><canvas id="categoryChart"></canvas></div>
+        <div class="card"><h3>Contacts by Industry</h3><canvas id="industryChart"></canvas></div>
+        <div class="card"><h3>Contacts by Layer</h3><canvas id="layerChart"></canvas></div>
+        <div class="card"><h3>Client Pipeline</h3><canvas id="pipelineChart"></canvas></div>
+        <div class="card"><h3>Relationship Strength</h3><canvas id="strengthChart"></canvas></div>
+        <div class="card"><h3>Client Probability</h3><canvas id="probabilityChart"></canvas></div>
+        <div class="card"><h3>Top Cities</h3><canvas id="cityChart"></canvas></div>
+        <div class="card"><h3>Network Growth</h3><canvas id="growthChart"></canvas></div>
+      </div>
+    </section>
+
+    <section id="map-view" class="view">
+      <div class="card map-card">
+        <div id="map"></div>
+      </div>
+      <div class="card">
+        <h3>Location Unknown</h3>
+        <div id="unknownLocations"></div>
+      </div>
+    </section>
+
+    <section id="mindmap-view" class="view">
+      <div class="card controls-card">
+        <div class="controls">
+          <input id="searchInput" type="text" placeholder="Search name" />
+          <select id="layerFilter">
+            <option value="">All layers</option>
+            <option value="Knows Me">Knows Me</option>
+            <option value="Does Not Know Me">Does Not Know Me</option>
+          </select>
+          <select id="clientStatusFilter">
+            <option value="">All client statuses</option>
+            <option value="Potential Client">Potential Client</option>
+            <option value="Already Client">Already Client</option>
+            <option value="Former Client">Former Client</option>
+          </select>
+          <label class="range-wrap">
+            <span>Min strength</span>
+            <input id="strengthFilter" type="range" min="0" max="10" value="0" />
+            <strong id="strengthValue">0</strong>
+          </label>
+        </div>
+        <div id="categoryFilters" class="chips"></div>
+      </div>
+      <div class="card">
+        <svg id="mindmap"></svg>
+      </div>
+    </section>
+  </main>
+
+  <div id="tooltip" class="tooltip hidden"></div>
+</body>
+</html>
