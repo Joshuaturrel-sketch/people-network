@@ -16,29 +16,29 @@
       <h1>People Network</h1>
       <p class="subtle">Live from Notion</p>
     </div>
-    <nav class="tabs">
-      <button data-view="stats" class="tab active">Stats</button>
-      <button data-view="map" class="tab">World Map</button>
-      <button data-view="mindmap" class="tab">Mindmap</button>
+    <nav class="tabs" aria-label="Views">
+      <button data-view="stats" class="tab active" type="button">Stats</button>
+      <button data-view="map" class="tab" type="button">World Map</button>
+      <button data-view="mindmap" class="tab" type="button">Mindmap</button>
     </nav>
   </header>
 
   <main class="app-shell">
-    <section id="stats-view" class="view active">
+    <section id="stats-view" class="view active" aria-label="Stats view">
       <div id="kpis" class="kpi-grid"></div>
       <div class="chart-grid">
-        <div class="card"><h3>Contacts by Category</h3><canvas id="categoryChart"></canvas></div>
-        <div class="card"><h3>Contacts by Industry</h3><canvas id="industryChart"></canvas></div>
-        <div class="card"><h3>Contacts by Layer</h3><canvas id="layerChart"></canvas></div>
-        <div class="card"><h3>Client Pipeline</h3><canvas id="pipelineChart"></canvas></div>
-        <div class="card"><h3>Relationship Strength</h3><canvas id="strengthChart"></canvas></div>
-        <div class="card"><h3>Client Probability</h3><canvas id="probabilityChart"></canvas></div>
-        <div class="card"><h3>Top Cities</h3><canvas id="cityChart"></canvas></div>
-        <div class="card"><h3>Network Growth</h3><canvas id="growthChart"></canvas></div>
+        <div class="chart-card"><h3>Contacts by Category</h3><div class="chart-box"><canvas id="categoryChart"></canvas></div></div>
+        <div class="chart-card"><h3>Contacts by Industry</h3><div class="chart-box"><canvas id="industryChart"></canvas></div></div>
+        <div class="chart-card"><h3>Contacts by Layer</h3><div class="chart-box"><canvas id="layerChart"></canvas></div></div>
+        <div class="chart-card"><h3>Client Pipeline</h3><div class="chart-box"><canvas id="pipelineChart"></canvas></div></div>
+        <div class="chart-card"><h3>Relationship Strength</h3><div class="chart-box"><canvas id="strengthChart"></canvas></div></div>
+        <div class="chart-card"><h3>Client Probability</h3><div class="chart-box"><canvas id="probabilityChart"></canvas></div></div>
+        <div class="chart-card"><h3>Top Cities</h3><div class="chart-box"><canvas id="cityChart"></canvas></div></div>
+        <div class="chart-card"><h3>Network Growth</h3><div class="chart-box"><canvas id="growthChart"></canvas></div></div>
       </div>
     </section>
 
-    <section id="map-view" class="view">
+    <section id="map-view" class="view" aria-label="World map view">
       <div class="card map-card">
         <div id="map"></div>
       </div>
@@ -48,7 +48,7 @@
       </div>
     </section>
 
-    <section id="mindmap-view" class="view">
+    <section id="mindmap-view" class="view" aria-label="Mindmap view">
       <div class="card controls-card">
         <div class="controls">
           <input id="searchInput" type="text" placeholder="Search name" />
@@ -72,13 +72,13 @@
         <div id="categoryFilters" class="chips"></div>
       </div>
       <div class="card mindmap-shell">
-  <div class="mindmap-toolbar">
-    <button type="button" id="zoomInBtn" class="chip">Zoom in</button>
-    <button type="button" id="zoomOutBtn" class="chip">Zoom out</button>
-    <button type="button" id="resetViewBtn" class="chip">Reset view</button>
-  </div>
-  <svg id="mindmap"></svg>
-</div>
+        <div class="mindmap-toolbar">
+          <button type="button" id="zoomInBtn" class="chip">Zoom in</button>
+          <button type="button" id="zoomOutBtn" class="chip">Zoom out</button>
+          <button type="button" id="resetViewBtn" class="chip">Reset view</button>
+        </div>
+        <svg id="mindmap"></svg>
+      </div>
     </section>
   </main>
 
