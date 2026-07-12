@@ -30,7 +30,11 @@ export function renderStats(people) {
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const jobsIndustryCounts = countBy(people, p => {
+  const jobsIndustryCounts = countBy(people, p =>
+  (p.industry || [])
+    .map(v => typeof v === "object" && v?.name ? v.name : v)
+    .filter(Boolean)
+);
   const raw = Array.isArray(p.industry) ? p.industry : [p.industry];
 
   return raw
