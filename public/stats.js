@@ -118,27 +118,24 @@ export function renderStats(people) {
       labels: jobsIndustryFilteredLabels,
       datasets: [{
         data: jobsIndustryFilteredValues,
-        backgroundColor: jobsIndustryFilteredLabels.map(
-          label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"
-        ),
+        backgroundColor: jobsIndustryFilteredLabels.map(label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"),
         borderColor: "#1d2126",
-        borderWidth: 2
+        borderWidth: 2,
+        hoverOffset: 6
       }]
     },
     options: {
       ...doughnutOptions(),
+      layout: { padding: 8 },
       plugins: {
-        ...baseOptions().plugins,
-        legend: {
-          labels: {
-            color: axisColor,
-            font: { size: 12 },
-            boxWidth: 18,
-            boxHeight: 10,
-            padding: 12
-          }
-        },
-        tooltip: baseOptions().plugins.tooltip
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#111315",
+          titleColor: "#f3f4f6",
+          bodyColor: "#f3f4f6",
+          borderColor: "#2c3238",
+          borderWidth: 1
+        }
       }
     }
   }));
