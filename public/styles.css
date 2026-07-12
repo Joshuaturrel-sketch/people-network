@@ -16,137 +16,63 @@
   --radius: 16px;
 }
 
-* {
-  box-sizing: border-box;
-}
-
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
 body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
 }
-
+button, input, select { font: inherit; }
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 18px 24px;
-  background: rgba(23, 26, 29, 0.92);
-  backdrop-filter: blur(8px);
+  position: sticky; top: 0; z-index: 10;
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  padding: 18px 24px; background: rgba(23, 26, 29, 0.92); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
-
-.tab,
-.chip,
-select,
-input[type="text"] {
-  padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
+.topbar h1 { margin: 0; font-size: 32px; }
+.subtle { margin: 4px 0 0; color: var(--muted); }
+.tabs, .controls, .chips, .mindmap-toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-shell { padding: 18px 24px 28px; }
+.view { display: none; }
+.view.active { display: block; }
+.tab, .chip, select, input[type="text"] {
+  padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--text);
 }
-
-.tab.active,
-.chip.active {
-  background: var(--primary);
-  color: white;
-  border-color: var(--primary);
+.tab.active, .chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.card, .kpi, .chart-card {
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); box-shadow: var(--shadow);
 }
-
-.card,
-.kpi {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--text);
+.kpi-grid, .chart-grid { display: grid; gap: 16px; }
+.kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 16px; }
+.kpi { padding: 16px; }
+.kpi h3, .chart-card h3 { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+.kpi p { margin: 0; font-size: 28px; font-weight: 700; }
+.chart-grid { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.chart-card { height: 380px; display: flex; flex-direction: column; padding: 16px; }
+.chart-box { position: relative; flex: 1 1 auto; min-height: 0; height: 300px; }
+.chart-box canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100%; }
+.map-card { padding: 16px; margin-bottom: 16px; }
+#map { width: 100%; height: 72vh; min-height: 620px; }
+.mindmap-shell { padding: 16px; overflow: hidden; }
+#mindmap { width: 100%; height: 72vh; min-height: 620px; display: block; background: var(--surface); border-radius: 12px; cursor: grab; }
+#mindmap:active { cursor: grabbing; }
+.node-label { font-size: 11px; fill: #e5e7eb; pointer-events: none; }
+.link-line { stroke: #4b5563; stroke-opacity: 0.7; }
+.tooltip {
+  position: fixed; pointer-events: none; z-index: 30; max-width: 320px;
+  background: #101316; border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; color: var(--text); box-shadow: var(--shadow);
 }
-
-.node-label {
-  font-size: 11px;
-  fill: #e5e7eb;
-  pointer-events: none;
-}
-
-.link-line {
-  stroke: #4b5563;
-  stroke-opacity: 0.7;
-}
-
-.mindmap-shell {
-  position: relative;
-  overflow: hidden;
-}
-
-.mindmap-toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-#mindmap {
-  width: 100%;
-  height: 72vh;
-  min-height: 620px;
-  display: block;
-  background: var(--surface);
-  border-radius: 12px;
-  cursor: grab;
-}
-
-#mindmap:active {
-  cursor: grabbing;
-}
-
-.chart-card {
-  height: 380px;
-  display: flex;
-  flex-direction: column;
-}
-
-.chart-card h3 {
-  margin: 0 0 12px;
-  flex: 0 0 auto;
-}
-
-.chart-box {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  height: 300px;
-}
-
-.chart-box canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-  max-height: 100%;
-}
-
+.hidden { display: none; }
+.range-wrap { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.range-wrap input { width: 180px; }
 @media (max-width: 900px) {
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .app-shell {
-    padding: 14px;
-  }
-
-  #map svg,
-  #mindmap {
-    min-height: 480px;
-  }
-  .chart-card {
-  height: 320px;
-}
-
-.chart-box {
-  height: 240px;
-}
+  .topbar { flex-direction: column; align-items: flex-start; }
+  .app-shell { padding: 14px; }
+  #map, #mindmap { min-height: 480px; height: 62vh; }
+  .chart-card { height: 320px; }
 }
