@@ -11,15 +11,46 @@ function clearCharts() {
 const axisColor = "#e5e7eb";
 const gridColor = "rgba(255,255,255,0.08)";
 
+const JOBS_INDUSTRY_LABELS = [
+  "Forex",
+  "Other Financial Instruments",
+  "Broker",
+  "Communications",
+  "Marketing",
+  "Public Servant",
+  "Other",
+  "Politics",
+  "Retiree",
+  "Unemployed",
+  "Self/Employed"
+];
+
+const JOBS_INDUSTRY_COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#a855f7",
+  "#c08457",
+  "#ef4444",
+  "#eab308",
+  "#9ca3af",
+  "#f472b6",
+  "#f97316",
+  "#78716c",
+  "#7dd3a7"
+];
+
 export function renderStats(people) {
   clearCharts();
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const jobsIndustryCounts = countBy(people, p => [p.industry || "Other"]);
+  const jobsIndustryCounts = countBy(people, p => Array.isArray(p.industry) ? p.industry : [p.industry || "Other"]);
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
-  const cityCounts = countBy(people.filter(p => p.cityCountry?.trim()), p => [p.cityCountry.split(",")[0].trim()]);
+  const cityCounts = countBy(
+    people.filter(p => p.cityCountry?.trim()),
+    p => [p.cityCountry.split(",")[0].trim()]
+  );
 
   const strengthBuckets = { "1–2": 0, "3–4": 0, "5–6": 0, "7–8": 0, "9–10": 0 };
   people.forEach(p => {
@@ -60,29 +91,21 @@ export function renderStats(people) {
         borderWidth: 2
       }]
     },
-    options: baseOptions()
+    options: doughnutOptions()
   }));
 
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
-    type: "bar",
+    type: "doughnut",
     data: {
-      labels: Object.keys(jobsIndustryCounts),
+      labels: JOBS_INDUSTRY_LABELS,
       datasets: [{
-        label: "Contacts",
-        data: Object.values(jobsIndustryCounts),
-        backgroundColor: "#0f8b94",
-        maxBarThickness: 28,
-        borderRadius: 6
+        data: JOBS_INDUSTRY_LABELS.map(label => jobsIndustryCounts[label] || 0),
+        backgroundColor: JOBS_INDUSTRY_COLORS,
+        borderColor: "#1d2126",
+        borderWidth: 2
       }]
     },
-    options: {
-      ...baseOptions(),
-      indexAxis: "y",
-      scales: {
-        x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } },
-        y: { ticks: { color: axisColor }, grid: { color: gridColor } }
-      }
-    }
+    options: doughnutOptions()
   }));
 
   charts.push(new Chart(document.getElementById("layerChart"), {
@@ -104,9 +127,27 @@ export function renderStats(people) {
     data: {
       labels: ["Clients"],
       datasets: [
-        { label: "Potential Client", data: [clientStatusCounts["Potential Client"] || 0], backgroundColor: "#f472b6", maxBarThickness: 40, borderRadius: 6 },
-        { label: "Already Client", data: [clientStatusCounts["Already Client"] || 0], backgroundColor: "#ef4444", maxBarThickness: 40, borderRadius: 6 },
-        { label: "Former Client", data: [clientStatusCounts["Former Client"] || 0], backgroundColor: "#9ca3af", maxBarThickness: 40, borderRadius: 6 }
+        {
+          label: "Potential Client",
+          data: [clientStatusCounts["Potential Client"] || 0],
+          backgroundColor: "#f472b6",
+          maxBarThickness: 40,
+          borderRadius: 6
+        },
+        {
+          label: "Already Client",
+          data: [clientStatusCounts["Already Client"] || 0],
+          backgroundColor: "#ef4444",
+          maxBarThickness: 40,
+          borderRadius: 6
+        },
+        {
+          label: "Former Client",
+          data: [clientStatusCounts["Former Client"] || 0],
+          backgroundColor: "#9ca3af",
+          maxBarThickness: 40,
+          borderRadius: 6
+        }
       ]
     },
     options: {
@@ -195,8 +236,13 @@ function renderKPIs(people) {
   const total = people.length;
   const alreadyClients = people.filter(p => p.clientStatus === "Already Client").length;
   const potentialClients = people.filter(p => p.clientStatus === "Potential Client").length;
-  const averageStrength = total ? (people.reduce((sum, p) => sum + (p.relationshipStrength || 0), 0) / total).toFixed(1) : "0.0";
-  const knownLocationPct = total ? Math.round((people.filter(p => p.cityCountry?.trim()).length / total) * 100) : 0;
+  const averageStrength = total
+    ? (people.reduce((sum, p) => sum + (p.relationshipStrength || 0), 0) / total).toFixed(1)
+    : "0.0";
+  const knownLocationPct = total
+    ? Math.round((people.filter(p => p.cityCountry?.trim()).length / total) * 100)
+    : 0;
+
   document.getElementById("kpis").innerHTML = `
     <div class="kpi"><h3>Total Contacts</h3><p>${total}</p></div>
     <div class="kpi"><h3>Already Clients</h3><p>${alreadyClients}</p></div>
@@ -221,6 +267,13 @@ function baseOptions() {
         borderWidth: 1
       }
     }
+  };
+}
+
+function doughnutOptions() {
+  return {
+    ...baseOptions(),
+    cutout: "58%"
   };
 }
 
