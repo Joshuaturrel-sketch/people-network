@@ -1,4 +1,4 @@
-import { CATEGORY_COLORS, INDUSTRY_OPTIONS } from "./config.js";
+import { CATEGORY_COLORS } from "./config.js";
 import { countBy } from "./data-utils.js";
 
 export let charts = [];
@@ -16,7 +16,7 @@ export function renderStats(people) {
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const industryCounts = countBy(people, p => [p.industry || "Other"]);
+  const jobsIndustryCounts = countBy(people, p => [p.industry || "Other"]);
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(people.filter(p => p.cityCountry?.trim()), p => [p.cityCountry.split(",")[0].trim()]);
@@ -51,42 +51,142 @@ export function renderStats(people) {
 
   charts.push(new Chart(document.getElementById("categoryChart"), {
     type: "doughnut",
-    data: { labels: Object.keys(categoryCounts), datasets: [{ data: Object.values(categoryCounts), backgroundColor: Object.keys(categoryCounts).map(k => CATEGORY_COLORS[k] || "#9ca3af"), borderColor: "#1d2126", borderWidth: 2 }] },
+    data: {
+      labels: Object.keys(categoryCounts),
+      datasets: [{
+        data: Object.values(categoryCounts),
+        backgroundColor: Object.keys(categoryCounts).map(k => CATEGORY_COLORS[k] || "#9ca3af"),
+        borderColor: "#1d2126",
+        borderWidth: 2
+      }]
+    },
     options: baseOptions()
   }));
 
-  charts.push(new Chart(document.getElementById("industryChart"), {
+  charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
     type: "bar",
-    data: { labels: INDUSTRY_OPTIONS, datasets: [{ label: "Contacts", data: INDUSTRY_OPTIONS.map(k => industryCounts[k] || 0), backgroundColor: "#0f8b94", maxBarThickness: 24, borderRadius: 6 }] },
-    options: { ...baseOptions(), indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }, y: { ticks: { color: axisColor }, grid: { color: gridColor } } } }
+    data: {
+      labels: Object.keys(jobsIndustryCounts),
+      datasets: [{
+        label: "Contacts",
+        data: Object.values(jobsIndustryCounts),
+        backgroundColor: "#0f8b94",
+        maxBarThickness: 28,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: "y",
+      scales: {
+        x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } },
+        y: { ticks: { color: axisColor }, grid: { color: gridColor } }
+      }
+    }
   }));
 
   charts.push(new Chart(document.getElementById("layerChart"), {
     type: "pie",
-    data: { labels: Object.keys(layerCounts), datasets: [{ data: Object.values(layerCounts), backgroundColor: ["#0f8b94", "#d9a514", "#6b7280"], borderColor: "#1d2126", borderWidth: 2 }] },
+    data: {
+      labels: Object.keys(layerCounts),
+      datasets: [{
+        data: Object.values(layerCounts),
+        backgroundColor: ["#0f8b94", "#d9a514", "#6b7280"],
+        borderColor: "#1d2126",
+        borderWidth: 2
+      }]
+    },
     options: baseOptions()
   }));
 
   charts.push(new Chart(document.getElementById("pipelineChart"), {
     type: "bar",
-    data: { labels: ["Clients"], datasets: [{ label: "Potential Client", data: [clientStatusCounts["Potential Client"] || 0], backgroundColor: "#f472b6", maxBarThickness: 40, borderRadius: 6 }, { label: "Already Client", data: [clientStatusCounts["Already Client"] || 0], backgroundColor: "#ef4444", maxBarThickness: 40, borderRadius: 6 }, { label: "Former Client", data: [clientStatusCounts["Former Client"] || 0], backgroundColor: "#9ca3af", maxBarThickness: 40, borderRadius: 6 }] },
-    options: { ...baseOptions(), scales: { x: { stacked: true, ticks: { color: axisColor }, grid: { color: gridColor } }, y: { stacked: true, beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } } } }
+    data: {
+      labels: ["Clients"],
+      datasets: [
+        { label: "Potential Client", data: [clientStatusCounts["Potential Client"] || 0], backgroundColor: "#f472b6", maxBarThickness: 40, borderRadius: 6 },
+        { label: "Already Client", data: [clientStatusCounts["Already Client"] || 0], backgroundColor: "#ef4444", maxBarThickness: 40, borderRadius: 6 },
+        { label: "Former Client", data: [clientStatusCounts["Former Client"] || 0], backgroundColor: "#9ca3af", maxBarThickness: 40, borderRadius: 6 }
+      ]
+    },
+    options: {
+      ...baseOptions(),
+      scales: {
+        x: { stacked: true, ticks: { color: axisColor }, grid: { color: gridColor } },
+        y: { stacked: true, beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+      }
+    }
   }));
 
-  charts.push(new Chart(document.getElementById("strengthChart"), { type: "bar", data: { labels: Object.keys(strengthBuckets), datasets: [{ label: "Contacts", data: Object.values(strengthBuckets), backgroundColor: "#5ea83a", maxBarThickness: 36, borderRadius: 6 }] }, options: barOptions() }));
-  charts.push(new Chart(document.getElementById("probabilityChart"), { type: "bar", data: { labels: Object.keys(probabilityBuckets), datasets: [{ label: "Contacts", data: Object.values(probabilityBuckets), backgroundColor: "#df8b1d", maxBarThickness: 36, borderRadius: 6 }] }, options: barOptions() }));
+  charts.push(new Chart(document.getElementById("strengthChart"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(strengthBuckets),
+      datasets: [{
+        label: "Contacts",
+        data: Object.values(strengthBuckets),
+        backgroundColor: "#5ea83a",
+        maxBarThickness: 36,
+        borderRadius: 6
+      }]
+    },
+    options: barOptions()
+  }));
+
+  charts.push(new Chart(document.getElementById("probabilityChart"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(probabilityBuckets),
+      datasets: [{
+        label: "Contacts",
+        data: Object.values(probabilityBuckets),
+        backgroundColor: "#df8b1d",
+        maxBarThickness: 36,
+        borderRadius: 6
+      }]
+    },
+    options: barOptions()
+  }));
 
   const topCities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   charts.push(new Chart(document.getElementById("cityChart"), {
     type: "bar",
-    data: { labels: topCities.map(([city]) => city), datasets: [{ label: "Contacts", data: topCities.map(([, count]) => count), backgroundColor: "#6b7280", maxBarThickness: 24, borderRadius: 6 }] },
-    options: { ...baseOptions(), indexAxis: "y", scales: { x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }, y: { ticks: { color: axisColor }, grid: { color: gridColor } } } }
+    data: {
+      labels: topCities.map(([city]) => city),
+      datasets: [{
+        label: "Contacts",
+        data: topCities.map(([, count]) => count),
+        backgroundColor: "#6b7280",
+        maxBarThickness: 24,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: "y",
+      scales: {
+        x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } },
+        y: { ticks: { color: axisColor }, grid: { color: gridColor } }
+      }
+    }
   }));
 
   const growthKeys = Object.keys(growthCounts).sort();
   charts.push(new Chart(document.getElementById("growthChart"), {
     type: "line",
-    data: { labels: growthKeys, datasets: [{ label: "Contacts Added", data: growthKeys.map(k => growthCounts[k]), borderColor: "#0f8b94", backgroundColor: "rgba(15, 139, 148, 0.2)", tension: 0.25, fill: true, pointRadius: 3, pointHoverRadius: 5 }] },
+    data: {
+      labels: growthKeys,
+      datasets: [{
+        label: "Contacts Added",
+        data: growthKeys.map(k => growthCounts[k]),
+        borderColor: "#0f8b94",
+        backgroundColor: "rgba(15, 139, 148, 0.2)",
+        tension: 0.25,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      }]
+    },
     options: lineOptions()
   }));
 }
@@ -107,7 +207,39 @@ function renderKPIs(people) {
 }
 
 function baseOptions() {
-  return { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { labels: { color: axisColor } }, tooltip: { backgroundColor: "#111315", titleColor: "#f3f4f6", bodyColor: "#f3f4f6", borderColor: "#2c3238", borderWidth: 1 } } };
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { labels: { color: axisColor } },
+      tooltip: {
+        backgroundColor: "#111315",
+        titleColor: "#f3f4f6",
+        bodyColor: "#f3f4f6",
+        borderColor: "#2c3238",
+        borderWidth: 1
+      }
+    }
+  };
 }
-function barOptions() { return { ...baseOptions(), scales: { x: { ticks: { color: axisColor }, grid: { color: gridColor } }, y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } } } }; }
-function lineOptions() { return { ...baseOptions(), scales: { x: { ticks: { color: axisColor }, grid: { color: gridColor } }, y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } } } }; }
+
+function barOptions() {
+  return {
+    ...baseOptions(),
+    scales: {
+      x: { ticks: { color: axisColor }, grid: { color: gridColor } },
+      y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+    }
+  };
+}
+
+function lineOptions() {
+  return {
+    ...baseOptions(),
+    scales: {
+      x: { ticks: { color: axisColor }, grid: { color: gridColor } },
+      y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+    }
+  };
+}
