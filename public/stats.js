@@ -45,9 +45,9 @@ export function renderStats(people) {
 
   const categoryCounts = countBy(people, p => p.category || []);
   const jobsIndustryCounts = countBy(
-    people,
-    p => Array.isArray(p.industry) ? p.industry : [p.industry || "Other"]
-  );
+  people,
+  p => Array.isArray(p.industry) ? p.industry : normalizeIndustry(p.industry)
+);
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(
@@ -366,4 +366,26 @@ function lineOptions() {
       }
     }
   };
+}
+
+function normalizeIndustry(value) {
+  const v = String(value || "Other").trim().toLowerCase();
+  const map = {
+    "forex": ["Forex"],
+    "other financial instruments": ["Other Financial Instruments"],
+    "other financial instrument": ["Other Financial Instruments"],
+    "broker": ["Broker"],
+    "communications": ["Communications"],
+    "marketing": ["Marketing"],
+    "public servant": ["Public Servant"],
+    "public servants": ["Public Servant"],
+    "other": ["Other"],
+    "politics": ["Politics"],
+    "retiree": ["Retiree"],
+    "unemployed": ["Unemployed"],
+    "self/employed": ["Self/Employed"],
+    "self employed": ["Self/Employed"],
+    "self-employed": ["Self/Employed"]
+  };
+  return map[v] || ["Other"];
 }
