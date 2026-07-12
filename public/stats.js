@@ -31,8 +31,13 @@ export function renderStats(people) {
 
   const categoryCounts = countBy(people, p => p.category || []);
   const jobsIndustryCounts = countBy(people, p =>
-  (p.industry || [])
-    .map(v => typeof v === "object" && v?.name ? v.name : v)
+  (Array.isArray(p.industry) ? p.industry : [p.industry])
+    .map(item => {
+      if (!item) return null;
+      if (typeof item === "string") return normalizeIndustryLabel(item);
+      if (typeof item === "object" && item.name) return normalizeIndustryLabel(item.name);
+      return normalizeIndustryLabel(String(item));
+    })
     .filter(Boolean)
 );
   const raw = Array.isArray(p.industry) ? p.industry : [p.industry];
@@ -97,8 +102,7 @@ export function renderStats(people) {
     options: doughnutOptions()
   }));
 
-  const jobsIndustryLabels = Object.keys(jobsIndustryCounts);
-  const jobsIndustryData = Object.values(jobsIndustryCounts);
+
 
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
   type: "doughnut",
