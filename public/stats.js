@@ -31,12 +31,17 @@ export function renderStats(people) {
 
   const categoryCounts = countBy(people, p => p.category || []);
   const jobsIndustryCounts = countBy(people, p => {
-    const values = Array.isArray(p.industry) ? p.industry : [p.industry];
-    return values
-      .map(v => typeof v === "object" && v?.name ? v.name : v)
-      .map(v => normalizeIndustryLabel(v))
-      .filter(Boolean);
-  });
+  const raw = Array.isArray(p.industry) ? p.industry : [p.industry];
+
+  return raw
+    .map(item => {
+      if (!item) return null;
+      if (typeof item === "string") return item.trim();
+      if (typeof item === "object" && item.name) return item.name.trim();
+      return String(item).trim();
+    })
+    .filter(Boolean);
+});
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(
@@ -104,10 +109,7 @@ export function renderStats(people) {
       borderWidth: 2
     }]
   },
-  options: {
-    ...baseOptions(),
-    cutout: "58%"
-  }
+  options: doughnutOptions()
 }));
 
   charts.push(new Chart(document.getElementById("layerChart"), {
