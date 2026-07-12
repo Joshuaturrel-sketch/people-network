@@ -25,26 +25,29 @@ const JOBS_INDUSTRY_LABELS = [
   "Self/Employed"
 ];
 
-const JOBS_INDUSTRY_COLORS = [
-  "#3b82f6",
-  "#22c55e",
-  "#a855f7",
-  "#c08457",
-  "#ef4444",
-  "#eab308",
-  "#9ca3af",
-  "#f472b6",
-  "#f97316",
-  "#78716c",
-  "#7dd3a7"
-];
+const JOBS_INDUSTRY_COLOR_MAP = {
+  "Forex": "#4f8df7",
+  "Other Financial Instruments": "#27c36a",
+  "Broker": "#9b5cff",
+  "Communications": "#d49461",
+  "Marketing": "#ef4d4d",
+  "Public Servant": "#edb81f",
+  "Other": "#9aa3b2",
+  "Politics": "#ef6aa8",
+  "Retiree": "#f28a2d",
+  "Unemployed": "#7d776e",
+  "Self/Employed": "#74cfa8"
+};
 
 export function renderStats(people) {
   clearCharts();
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const jobsIndustryCounts = countBy(people, p => Array.isArray(p.industry) ? p.industry : [p.industry || "Other"]);
+  const jobsIndustryCounts = countBy(
+    people,
+    p => Array.isArray(p.industry) ? p.industry : [p.industry || "Other"]
+  );
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(
@@ -86,7 +89,9 @@ export function renderStats(people) {
       labels: Object.keys(categoryCounts),
       datasets: [{
         data: Object.values(categoryCounts),
-        backgroundColor: Object.keys(categoryCounts).map(k => CATEGORY_COLORS[k] || "#9ca3af"),
+        backgroundColor: Object.keys(categoryCounts).map(
+          k => CATEGORY_COLORS[k] || "#9ca3af"
+        ),
         borderColor: "#1d2126",
         borderWidth: 2
       }]
@@ -94,18 +99,48 @@ export function renderStats(people) {
     options: doughnutOptions()
   }));
 
+  const jobsIndustryValues = JOBS_INDUSTRY_LABELS.map(
+    label => jobsIndustryCounts[label] || 0
+  );
+  const jobsIndustryHasData = jobsIndustryValues.some(v => v > 0);
+
+  const jobsIndustryFilteredLabels = jobsIndustryHasData
+    ? JOBS_INDUSTRY_LABELS.filter((_, i) => jobsIndustryValues[i] > 0)
+    : ["Other"];
+
+  const jobsIndustryFilteredValues = jobsIndustryHasData
+    ? jobsIndustryValues.filter(v => v > 0)
+    : [1];
+
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
     type: "doughnut",
     data: {
-      labels: JOBS_INDUSTRY_LABELS,
+      labels: jobsIndustryFilteredLabels,
       datasets: [{
-        data: JOBS_INDUSTRY_LABELS.map(label => jobsIndustryCounts[label] || 0),
-        backgroundColor: JOBS_INDUSTRY_COLORS,
+        data: jobsIndustryFilteredValues,
+        backgroundColor: jobsIndustryFilteredLabels.map(
+          label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"
+        ),
         borderColor: "#1d2126",
         borderWidth: 2
       }]
     },
-    options: doughnutOptions()
+    options: {
+      ...doughnutOptions(),
+      plugins: {
+        ...baseOptions().plugins,
+        legend: {
+          labels: {
+            color: axisColor,
+            font: { size: 12 },
+            boxWidth: 18,
+            boxHeight: 10,
+            padding: 12
+          }
+        },
+        tooltip: baseOptions().plugins.tooltip
+      }
+    }
   }));
 
   charts.push(new Chart(document.getElementById("layerChart"), {
@@ -153,8 +188,17 @@ export function renderStats(people) {
     options: {
       ...baseOptions(),
       scales: {
-        x: { stacked: true, ticks: { color: axisColor }, grid: { color: gridColor } },
-        y: { stacked: true, beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+        x: {
+          stacked: true,
+          ticks: { color: axisColor },
+          grid: { color: gridColor }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { color: axisColor },
+          grid: { color: gridColor }
+        }
       }
     }
   }));
@@ -189,7 +233,10 @@ export function renderStats(people) {
     options: barOptions()
   }));
 
-  const topCities = Object.entries(cityCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  const topCities = Object.entries(cityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+
   charts.push(new Chart(document.getElementById("cityChart"), {
     type: "bar",
     data: {
@@ -206,8 +253,15 @@ export function renderStats(people) {
       ...baseOptions(),
       indexAxis: "y",
       scales: {
-        x: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } },
-        y: { ticks: { color: axisColor }, grid: { color: gridColor } }
+        x: {
+          beginAtZero: true,
+          ticks: { color: axisColor },
+          grid: { color: gridColor }
+        },
+        y: {
+          ticks: { color: axisColor },
+          grid: { color: gridColor }
+        }
       }
     }
   }));
@@ -234,8 +288,12 @@ export function renderStats(people) {
 
 function renderKPIs(people) {
   const total = people.length;
-  const alreadyClients = people.filter(p => p.clientStatus === "Already Client").length;
-  const potentialClients = people.filter(p => p.clientStatus === "Potential Client").length;
+  const alreadyClients = people.filter(
+    p => p.clientStatus === "Already Client"
+  ).length;
+  const potentialClients = people.filter(
+    p => p.clientStatus === "Potential Client"
+  ).length;
   const averageStrength = total
     ? (people.reduce((sum, p) => sum + (p.relationshipStrength || 0), 0) / total).toFixed(1)
     : "0.0";
@@ -258,7 +316,9 @@ function baseOptions() {
     maintainAspectRatio: false,
     animation: false,
     plugins: {
-      legend: { labels: { color: axisColor } },
+      legend: {
+        labels: { color: axisColor }
+      },
       tooltip: {
         backgroundColor: "#111315",
         titleColor: "#f3f4f6",
@@ -281,8 +341,15 @@ function barOptions() {
   return {
     ...baseOptions(),
     scales: {
-      x: { ticks: { color: axisColor }, grid: { color: gridColor } },
-      y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+      x: {
+        ticks: { color: axisColor },
+        grid: { color: gridColor }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: axisColor },
+        grid: { color: gridColor }
+      }
     }
   };
 }
@@ -291,8 +358,15 @@ function lineOptions() {
   return {
     ...baseOptions(),
     scales: {
-      x: { ticks: { color: axisColor }, grid: { color: gridColor } },
-      y: { beginAtZero: true, ticks: { color: axisColor }, grid: { color: gridColor } }
+      x: {
+        ticks: { color: axisColor },
+        grid: { color: gridColor }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: axisColor },
+        grid: { color: gridColor }
+      }
     }
   };
 }
