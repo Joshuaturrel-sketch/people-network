@@ -96,17 +96,21 @@ export function renderStats(people) {
     options: doughnutOptions()
   }));
 
-  const jobsIndustryValues = JOBS_INDUSTRY_LABELS.map(
-    label => jobsIndustryCounts[label] || 0
-  );
-  const jobsIndustryHasData = jobsIndustryValues.some(v => v > 0);
+  const orderedIndustryLabels = [
+    ...JOBS_INDUSTRY_LABELS.filter(label => (jobsIndustryCounts[label] || 0) > 0),
+    ...Object.keys(jobsIndustryCounts).filter(
+      label => !JOBS_INDUSTRY_LABELS.includes(label) && (jobsIndustryCounts[label] || 0) > 0
+    )
+  ];
+
+  const jobsIndustryHasData = orderedIndustryLabels.length > 0;
 
   const jobsIndustryFilteredLabels = jobsIndustryHasData
-    ? JOBS_INDUSTRY_LABELS.filter((_, i) => jobsIndustryValues[i] > 0)
+    ? orderedIndustryLabels
     : ["Other"];
 
   const jobsIndustryFilteredValues = jobsIndustryHasData
-    ? jobsIndustryValues.filter(v => v > 0)
+    ? jobsIndustryFilteredLabels.map(label => jobsIndustryCounts[label] || 0)
     : [1];
 
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
@@ -127,7 +131,15 @@ export function renderStats(people) {
       ...doughnutOptions(),
       layout: { padding: 8 },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: "bottom",
+          labels: {
+            color: axisColor,
+            boxWidth: 12,
+            padding: 12
+          }
+        },
         tooltip: {
           backgroundColor: "#111315",
           titleColor: "#f3f4f6",
@@ -384,7 +396,8 @@ function normalizeIndustryValues(industry) {
 }
 
 function normalizeIndustryLabel(value) {
-  const v = String(value || "").trim().toLowerCase();
+  const raw = typeof value === "object" && value?.name ? value.name : value || "Other";
+  const v = String(raw).trim().toLowerCase();
 
   const map = {
     "forex": "Forex",
@@ -405,5 +418,5 @@ function normalizeIndustryLabel(value) {
     "self / employed": "Self/Employed"
   };
 
-  return map[v] || null;
+  return map[v] || String(raw).trim() || "Other";
 }
