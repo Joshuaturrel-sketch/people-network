@@ -1,6 +1,9 @@
 export function countBy(items, fn) {
   return items.reduce((acc, item) => {
-    for (const key of fn(item)) acc[key] = (acc[key] || 0) + 1;
+    for (const key of fn(item)) {
+      if (!key) continue;
+      acc[key] = (acc[key] || 0) + 1;
+    }
     return acc;
   }, {});
 }
@@ -37,7 +40,7 @@ export function normalizePerson(page) {
     cityCountry: getProp(props, "City/Country", "rich_text") || "",
     phone: getProp(props, "Phone", "phone_number") || "",
     email: getProp(props, "Email", "email") || "",
-    industry: getProp(props, "Jobs / Industry", "select") || "Other",
+    industry: getProp(props, "Jobs / Industry", "multi_select"),
     connectedFrom: getProp(props, "Connected From", "relation"),
     connectedTo: getProp(props, "Connected To", "relation"),
     metVia: getProp(props, "Met Via", "multi_select"),
@@ -69,28 +72,33 @@ export function buildMergedEdges(people, edges) {
 
 export function geocode(cityCountry) {
   if (!cityCountry) return null;
+
   const city = cityCountry.trim().toLowerCase().split(",")[0].trim();
+
   const lookup = {
-  lyon: [45.7640, 4.8357],
-  marseille: [43.2965, 5.3698],
-  paris: [48.8566, 2.3522],
-  london: [51.50853, -0.12574],
-  edinburgh: [55.953251, -3.188267],
-  dundee: [56.4620, -2.9707],
-  cannes: [43.5513, 7.0128],
-  italy: [41.8719, 12.5674],
-  lithuania: [55.169438, 23.881275],
-  estonia: [59.0, 26.0],
-  denmark: [56.26392, 9.501785],
-  danemark: [56.26392, 9.501785],
-  us: [44.9670, -103.7670],
-  uk: [54.5, -3.0]
-};
+    lyon: [45.7640, 4.8357],
+    marseille: [43.2965, 5.3698],
+    paris: [48.8566, 2.3522],
+    london: [51.50853, -0.12574],
+    edinburgh: [55.953251, -3.188267],
+    dundee: [56.4620, -2.9707],
+    cannes: [43.5513, 7.0128],
+    italy: [41.8719, 12.5674],
+    lithuania: [55.169438, 23.881275],
+    estonia: [59.0, 26.0],
+    denmark: [56.26392, 9.501785],
+    danemark: [56.26392, 9.501785],
+    us: [44.9670, -103.7670],
+    uk: [54.5, -3.0]
+  };
+
   return lookup[city] || null;
 }
 
 export function dominantCategory(categories) {
   const counts = {};
-  categories.flat().forEach(cat => { if (cat) counts[cat] = (counts[cat] || 0) + 1; });
+  categories.flat().forEach(cat => {
+    if (cat) counts[cat] = (counts[cat] || 0) + 1;
+  });
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Other";
 }
