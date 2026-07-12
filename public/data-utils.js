@@ -71,12 +71,18 @@ export function geocode(cityCountry) {
   if (!cityCountry) return null;
   const city = cityCountry.trim().toLowerCase().split(",")[0].trim();
   const lookup = {
-    lyon: [45.7640, 4.8357],
-    marseille: [43.2965, 5.3698],
-    paris: [48.8566, 2.3522],
-    dundee: [56.4620, -2.9707],
-    uk: [54.5, -3.0]
-  };
+  lyon: [45.7640, 4.8357],
+  marseille: [43.2965, 5.3698],
+  paris: [48.8566, 2.3522],
+  london: [51.50853, -0.12574],
+  edinburgh: [55.953251, -3.188267],
+  dundee: [56.4620, -2.9707],
+  italy: [41.8719, 12.5674],
+  denmark: [56.26392, 9.501785],
+  danemark: [56.26392, 9.501785],
+  us: [44.9670, -103.7670],
+  uk: [54.5, -3.0]
+};
   return lookup[city] || null;
 }
 
