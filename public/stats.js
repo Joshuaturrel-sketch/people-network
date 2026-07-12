@@ -92,44 +92,23 @@ export function renderStats(people) {
   const jobsIndustryData = Object.values(jobsIndustryCounts);
 
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
-    type: "doughnut",
-    data: {
-      labels: jobsIndustryLabels,
-      datasets: [{
-        data: jobsIndustryData,
-        backgroundColor: jobsIndustryLabels.map(
-          label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"
-        ),
-        borderColor: "#1d2126",
-        borderWidth: 2,
-        hoverOffset: 6
-      }]
-    },
-    options: {
-      ...doughnutOptions(),
-      plugins: {
-        ...doughnutOptions().plugins,
-        legend: {
-          display: false
-        },
-        tooltip: {
-          backgroundColor: "#111315",
-          titleColor: "#f3f4f6",
-          bodyColor: "#f3f4f6",
-          borderColor: "#2c3238",
-          borderWidth: 1,
-          callbacks: {
-            title(context) {
-              return context[0].label;
-            },
-            label(context) {
-              return `Contacts: ${context.formattedValue}`;
-            }
-          }
-        }
-      }
-    }
-  }));
+  type: "doughnut",
+  data: {
+    labels: Object.keys(jobsIndustryCounts),
+    datasets: [{
+      data: Object.values(jobsIndustryCounts),
+      backgroundColor: Object.keys(jobsIndustryCounts).map(
+        k => JOBS_INDUSTRY_COLOR_MAP[k] || "#9ca3af"
+      ),
+      borderColor: "#1d2126",
+      borderWidth: 2
+    }]
+  },
+  options: {
+    ...baseOptions(),
+    cutout: "58%"
+  }
+}));
 
   charts.push(new Chart(document.getElementById("layerChart"), {
     type: "pie",
