@@ -23,13 +23,22 @@ export async function renderWorldMap(people) {
   const unknown = [];
   people.forEach(person => {
     const coords = geocode(person.cityCountry);
-    if (!coords) { unknown.push(person); return; }
+    if (!coords) {
+      unknown.push(person);
+      return;
+    }
     const city = person.cityCountry.trim().toLowerCase().split(",")[0].trim();
     if (!grouped[city]) grouped[city] = { coords, people: [] };
     grouped[city].people.push(person);
   });
 
-  const points = Object.entries(grouped).map(([city, data]) => ({ city, coords: data.coords, count: data.people.length, names: data.people.map(p => p.name), dominant: dominantCategory(data.people.map(p => p.category || [])) }));
+  const points = Object.entries(grouped).map(([city, data]) => ({
+    city,
+    coords: data.coords,
+    count: data.people.length,
+    names: data.people.map(p => p.name),
+    dominant: dominantCategory(data.people.map(p => p.category || []))
+  }));
 
   g.selectAll("circle").data(points).join("circle")
     .attr("cx", d => projection(d.coords)[0])
@@ -43,5 +52,19 @@ export async function renderWorldMap(people) {
     .on("mouseleave", hideTooltip);
 
   svg.call(d3.zoom().scaleExtent([1, 8]).on("zoom", event => { g.attr("transform", event.transform); }));
-  document.getElementById("unknownLocations").innerHTML = unknown.length ? `<ul>${unknown.map(p => `<li>${p.name}${p.cityCountry ? ` — ${p.cityCountry}` : ""}</li>`).join("")]
+  document.getElementById("unknownLocations").innerHTML = unknown.length
+    ? `<ul>${unknown.map(p => `<li>${p.name}${p.cityCountry ? ` — ${p.cityCountry}` : ""}</li>`).join("")}</ul>`
+    : "<p>All contacts have mapped or approved locations.</p>";
+}
 
+function capitalize(str) {
+  return String(str || "").replace(/\\b\\w/g, c => c.toUpperCase());
+}
+function showTooltip(event, html) {
+  const tooltip = document.getElementById("tooltip");
+  tooltip.innerHTML = html;
+  tooltip.classList.remove("hidden");
+  tooltip.style.left = `${event.pageX + 14}px`;
+  tooltip.style.top = `${event.pageY + 14}px`;
+}
+function hideTooltip() { document.getElementById("tooltip").classList.add("hidden"); }
