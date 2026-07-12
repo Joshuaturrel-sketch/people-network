@@ -11,20 +11,6 @@ function clearCharts() {
 const axisColor = "#e5e7eb";
 const gridColor = "rgba(255,255,255,0.08)";
 
-const JOBS_INDUSTRY_LABELS = [
-  "Forex",
-  "Other Financial Instruments",
-  "Broker",
-  "Communications",
-  "Marketing",
-  "Public Servant",
-  "Other",
-  "Politics",
-  "Retiree",
-  "Unemployed",
-  "Self/Employed"
-];
-
 const JOBS_INDUSTRY_COLOR_MAP = {
   "Forex": "#4f8df7",
   "Other Financial Instruments": "#27c36a",
@@ -44,7 +30,13 @@ export function renderStats(people) {
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const jobsIndustryCounts = countBy(people, p => normalizeIndustryValues(p.industry));
+  const jobsIndustryCounts = countBy(people, p => {
+    const values = Array.isArray(p.industry) ? p.industry : [p.industry];
+    return values
+      .map(v => typeof v === "object" && v?.name ? v.name : v)
+      .map(v => normalizeIndustryLabel(v))
+      .filter(Boolean);
+  });
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(
@@ -96,30 +88,16 @@ export function renderStats(people) {
     options: doughnutOptions()
   }));
 
-  const orderedIndustryLabels = [
-    ...JOBS_INDUSTRY_LABELS.filter(label => (jobsIndustryCounts[label] || 0) > 0),
-    ...Object.keys(jobsIndustryCounts).filter(
-      label => !JOBS_INDUSTRY_LABELS.includes(label) && (jobsIndustryCounts[label] || 0) > 0
-    )
-  ];
-
-  const jobsIndustryHasData = orderedIndustryLabels.length > 0;
-
-  const jobsIndustryFilteredLabels = jobsIndustryHasData
-    ? orderedIndustryLabels
-    : ["Other"];
-
-  const jobsIndustryFilteredValues = jobsIndustryHasData
-    ? jobsIndustryFilteredLabels.map(label => jobsIndustryCounts[label] || 0)
-    : [1];
+  const jobsIndustryLabels = Object.keys(jobsIndustryCounts);
+  const jobsIndustryData = Object.values(jobsIndustryCounts);
 
   charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
     type: "doughnut",
     data: {
-      labels: jobsIndustryFilteredLabels,
+      labels: jobsIndustryLabels,
       datasets: [{
-        data: jobsIndustryFilteredValues,
-        backgroundColor: jobsIndustryFilteredLabels.map(
+        data: jobsIndustryData,
+        backgroundColor: jobsIndustryLabels.map(
           label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"
         ),
         borderColor: "#1d2126",
@@ -129,23 +107,25 @@ export function renderStats(people) {
     },
     options: {
       ...doughnutOptions(),
-      layout: { padding: 8 },
       plugins: {
+        ...doughnutOptions().plugins,
         legend: {
-          display: true,
-          position: "bottom",
-          labels: {
-            color: axisColor,
-            boxWidth: 12,
-            padding: 12
-          }
+          display: false
         },
         tooltip: {
           backgroundColor: "#111315",
           titleColor: "#f3f4f6",
           bodyColor: "#f3f4f6",
           borderColor: "#2c3238",
-          borderWidth: 1
+          borderWidth: 1,
+          callbacks: {
+            title(context) {
+              return context[0].label;
+            },
+            label(context) {
+              return `Contacts: ${context.formattedValue}`;
+            }
+          }
         }
       }
     }
@@ -379,26 +359,11 @@ function lineOptions() {
   };
 }
 
-function normalizeIndustryValues(industry) {
-  const rawValues = Array.isArray(industry) ? industry : [industry];
-
-  const labels = rawValues
-    .map(item => {
-      if (item == null) return null;
-      if (typeof item === "string") return item;
-      if (typeof item === "object" && item.name) return item.name;
-      return String(item);
-    })
-    .map(normalizeIndustryLabel)
-    .filter(Boolean);
-
-  return labels.length ? labels : ["Other"];
-}
-
 function normalizeIndustryLabel(value) {
-  const raw = typeof value === "object" && value?.name ? value.name : value || "Other";
-  const v = String(raw).trim().toLowerCase();
+  const raw = String(value || "").trim();
+  if (!raw) return null;
 
+  const v = raw.toLowerCase();
   const map = {
     "forex": "Forex",
     "other financial instruments": "Other Financial Instruments",
@@ -418,5 +383,5 @@ function normalizeIndustryLabel(value) {
     "self / employed": "Self/Employed"
   };
 
-  return map[v] || String(raw).trim() || "Other";
+  return map[v] || raw;
 }
