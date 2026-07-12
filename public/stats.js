@@ -103,14 +103,22 @@ export function renderStats(people) {
   }));
 
 
+   const jobsIndustryLabels = Object.keys(jobsIndustryCounts);
+   const jobsIndustryData = Object.values(jobsIndustryCounts);
 
-  charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
+console.log("people count", people.length);
+console.log("industry sample", people.slice(0, 10).map(p => p.industry));
+console.log("jobsIndustryCounts", jobsIndustryCounts);
+console.log("jobsIndustry labels", jobsIndustryLabels);
+console.log("jobsIndustry data", jobsIndustryData);
+
+charts.push(new Chart(document.getElementById("jobsIndustryChart"), {
   type: "doughnut",
   data: {
-    labels: Object.keys(jobsIndustryCounts),
+    labels: jobsIndustryLabels,
     datasets: [{
-      data: Object.values(jobsIndustryCounts),
-      backgroundColor: Object.keys(jobsIndustryCounts).map(
+      data: jobsIndustryData,
+      backgroundColor: jobsIndustryLabels.map(
         k => JOBS_INDUSTRY_COLOR_MAP[k] || "#9ca3af"
       ),
       borderColor: "#1d2126",
