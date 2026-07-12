@@ -1,90 +1,87 @@
-import { CITY_COORDS } from "./config.js";
+export function countBy(items, fn) {
+  return items.reduce((acc, item) => {
+    for (const key of fn(item)) acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function getProp(props, name, type) {
+  const p = props?.[name];
+  if (!p) return type === "multi_select" ? [] : null;
+  if (type === "title") return p.title?.map(x => x.plain_text).join("") || "";
+  if (type === "rich_text") return p.rich_text?.map(x => x.plain_text).join("") || "";
+  if (type === "select") return p.select?.name || null;
+  if (type === "multi_select") return p.multi_select?.map(x => x.name).filter(Boolean) || [];
+  if (type === "number") return typeof p.number === "number" ? p.number : null;
+  if (type === "email") return p.email || null;
+  if (type === "phone_number") return p.phone_number || null;
+  if (type === "relation") return p.relation?.map(x => x.id).filter(Boolean) || [];
+  if (type === "url") return p.url || null;
+  if (type === "created_time") return p.created_time || null;
+  return null;
+}
 
 export function normalizePerson(page) {
-  const p = page.properties;
-
+  const props = page.properties || {};
   return {
     id: page.id,
-    name: p["Name"]?.title?.[0]?.plain_text ?? "Unnamed",
-    category: p["Category"]?.multi_select?.map(o => o.name) ?? [],
-    layer: p["Layer"]?.select?.name ?? null,
-    relationshipStrength: p["Relationship Strength"]?.number ?? 0,
-    clientStatus: p["Client Status"]?.select?.name ?? null,
-    clientProbability: p["Client Probability"]?.number ?? null,
-    cityCountry: p["City/Country"]?.rich_text?.[0]?.plain_text ?? "",
-    industry: p["Jobs / Industry "]?.multi_select?.map(o => o.name) ?? [],
-    socialMedia: p["Social Media"]?.url ?? null,
-    referredBy: p["Referred By"]?.relation?.map(r => r.id) ?? [],
-    connectedTo: p["Connected To"]?.relation?.map(r => r.id) ?? [],
-    connectedFrom: p["Connected From"]?.relation?.map(r => r.id) ?? [],
-    email: p["Email"]?.email ?? null,
-    phone: p["Phone"]?.phone_number ?? null,
-    metVia: p["Met Via"]?.rich_text?.[0]?.plain_text ?? "",
-    notes: p["Notes"]?.rich_text?.[0]?.plain_text ?? "",
-    createdTime: page.created_time
+    name: getProp(props, "Name", "title") || "Untitled",
+    category: getProp(props, "Category", "multi_select"),
+    relationshipStrength: getProp(props, "Relationship Strength", "number") || 0,
+    layer: getProp(props, "Layer", "select") || "",
+    clientStatus: getProp(props, "Client Status", "select") || "",
+    clientProbability: (() => {
+      const raw = getProp(props, "Client Probability", "number");
+      return raw == null ? null : raw > 1 ? raw / 100 : raw;
+    })(),
+    cityCountry: getProp(props, "City/Country", "rich_text") || "",
+    phone: getProp(props, "Phone", "phone_number") || "",
+    email: getProp(props, "Email", "email") || "",
+    industry: getProp(props, "Jobs / Industry", "select") || "Other",
+    connectedFrom: getProp(props, "Connected From", "relation"),
+    connectedTo: getProp(props, "Connected To", "relation"),
+    metVia: getProp(props, "Met Via", "multi_select"),
+    notes: getProp(props, "Notes", "rich_text") || "",
+    socialMedia: getProp(props, "Social Media", "url") || getProp(props, "Social Media", "rich_text") || "",
+    referredBy: getProp(props, "Referred By", "relation"),
+    createdTime: page.created_time || getProp(props, "Created", "created_time")
   };
 }
 
 export function normalizeEdge(page) {
-  const p = page.properties;
-
+  const props = page.properties || {};
   return {
     id: page.id,
-    label: p["Edge Label"]?.title?.[0]?.plain_text ?? "",
-    personA: p["Person A"]?.relation?.[0]?.id ?? null,
-    personB: p["Person B"]?.relation?.[0]?.id ?? null,
-    strength: p["Strength"]?.number ?? 1,
-    notes: p["Notes"]?.rich_text?.[0]?.plain_text ?? ""
+    label: getProp(props, "Edge Label", "title") || "Edge",
+    source: getProp(props, "Person A", "relation")[0] || null,
+    target: getProp(props, "Person B", "relation")[0] || null,
+    strength: getProp(props, "Strength", "number") || 1,
+    notes: getProp(props, "Notes", "rich_text") || ""
   };
 }
 
-export function geocode(cityCountryStr) {
-  if (!cityCountryStr) return null;
-  const key = cityCountryStr.trim().toLowerCase().split(",")[0].trim();
-  return CITY_COORDS[key] ?? null;
-}
-
 export function buildMergedEdges(people, edges) {
-  const seen = new Set();
-  const out = [];
-
-  function add(source, target, strength = 1, label = "") {
-    if (!source || !target || source === target) return;
-    const key = [source, target].sort().join("||");
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push({ source, target, strength, label });
-  }
-
-  for (const edge of edges) {
-    add(edge.personA, edge.personB, edge.strength, edge.label);
-  }
-
-  for (const person of people) {
-    for (const targetId of person.connectedTo) {
-      add(person.id, targetId, 1, "");
-    }
-  }
-
-  return out;
+  const map = new Map(people.map(p => [p.id, p]));
+  return edges
+    .filter(e => e.source && e.target && map.has(e.source) && map.has(e.target))
+    .map(e => ({ ...e, sourcePerson: map.get(e.source), targetPerson: map.get(e.target) }));
 }
 
-export function dominantCategory(categoryArrays) {
-  const counts = {};
-  categoryArrays.flat().forEach(c => {
-    counts[c] = (counts[c] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+export function geocode(cityCountry) {
+  if (!cityCountry) return null;
+  const city = cityCountry.trim().toLowerCase().split(",")[0].trim();
+  const lookup = {
+    lyon: [45.7640, 4.8357],
+    marseille: [43.2965, 5.3698],
+    paris: [48.8566, 2.3522],
+    dundee: [56.4620, -2.9707],
+    uk: [54.5, -3.0]
+  };
+  return lookup[city] || null;
 }
 
-export function countBy(items, accessor) {
+export function dominantCategory(categories) {
   const counts = {};
-  for (const item of items) {
-    const keys = accessor(item);
-    for (const key of keys) {
-      if (!key) continue;
-      counts[key] = (counts[key] || 0) + 1;
-    }
-  }
-  return counts;
+  categories.flat().forEach(cat => { if (cat) counts[cat] = (counts[cat] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Other";
 }
