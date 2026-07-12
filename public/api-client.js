@@ -1,11 +1,13 @@
 export async function fetchPeople() {
-  const res = await fetch("/api/people");
-  if (!res.ok) throw new Error("Failed to fetch people");
-  return res.json();
+  const r = await fetch("/api/people");
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Failed to load people");
+  return data;
 }
 
 export async function fetchEdges() {
-  const res = await fetch("/api/edges");
-  if (!res.ok) throw new Error("Failed to fetch edges");
-  return res.json();
+  const r = await fetch("/api/edges");
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Failed to load edges");
+  return data;
 }
