@@ -44,10 +44,7 @@ export function renderStats(people) {
   renderKPIs(people);
 
   const categoryCounts = countBy(people, p => p.category || []);
-  const jobsIndustryCounts = countBy(people, p => {
-  const values = Array.isArray(p.industry) ? p.industry : [p.industry || "Other"];
-  return values.map(normalizeIndustryLabel);
-});
+  const jobsIndustryCounts = countBy(people, p => normalizeIndustryValues(p.industry));
   const layerCounts = countBy(people, p => [p.layer || "Unknown"]);
   const clientStatusCounts = countBy(people, p => [p.clientStatus || "Unknown"]);
   const cityCounts = countBy(
@@ -118,7 +115,9 @@ export function renderStats(people) {
       labels: jobsIndustryFilteredLabels,
       datasets: [{
         data: jobsIndustryFilteredValues,
-        backgroundColor: jobsIndustryFilteredLabels.map(label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"),
+        backgroundColor: jobsIndustryFilteredLabels.map(
+          label => JOBS_INDUSTRY_COLOR_MAP[label] || "#9aa3b2"
+        ),
         borderColor: "#1d2126",
         borderWidth: 2,
         hoverOffset: 6
@@ -368,8 +367,25 @@ function lineOptions() {
   };
 }
 
+function normalizeIndustryValues(industry) {
+  const rawValues = Array.isArray(industry) ? industry : [industry];
+
+  const labels = rawValues
+    .map(item => {
+      if (item == null) return null;
+      if (typeof item === "string") return item;
+      if (typeof item === "object" && item.name) return item.name;
+      return String(item);
+    })
+    .map(normalizeIndustryLabel)
+    .filter(Boolean);
+
+  return labels.length ? labels : ["Other"];
+}
+
 function normalizeIndustryLabel(value) {
-  const v = String(value || "Other").trim().toLowerCase();
+  const v = String(value || "").trim().toLowerCase();
+
   const map = {
     "forex": "Forex",
     "other financial instruments": "Other Financial Instruments",
@@ -388,5 +404,6 @@ function normalizeIndustryLabel(value) {
     "self-employed": "Self/Employed",
     "self / employed": "Self/Employed"
   };
-  return map[v] || "Other";
+
+  return map[v] || null;
 }
