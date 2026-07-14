@@ -1,100 +1,143 @@
-// app.js
 import { fetchPeople, fetchEdges } from "./api-client.js";
 import { renderStats } from "./stats.js";
-import { renderMindmap } from "./mindmap.js";
+import { renderMindmap, resetMindmapView } from "./mindmap.js";
 import { renderMap } from "./map.js";
+import { renderGraphStats } from "./graph-stats.js";
+import { buildMergedEdges } from "./data-utils.js";
 
 let people = [];
-let edges = [];
+let edgesDb = [];
+let mergedEdges = [];
+
+function setTheme() {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", "dark");
+}
+
+function showLoader(show) {
+  const el = document.getElementById("loader");
+  if (el) el.hidden = !show;
+}
 
 function showError(message) {
-  const error = document.getElementById("error-banner");
-  const loader = document.getElementById("loader");
-  if (loader) loader.hidden = true;
-  if (error) {
-    error.textContent = message;
-    error.hidden = false;
-  }
+  const el = document.getElementById("error-banner");
+  if (!el) return;
+  el.textContent = message;
+  el.hidden = false;
 }
 
-function hideLoader() {
-  const loader = document.getElementById("loader");
-  if (loader) loader.hidden = true;
+function clearError() {
+  const el = document.getElementById("error-banner");
+  if (!el) return;
+  el.hidden = true;
+  el.textContent = "";
 }
 
-function activateTab(tabId) {
+function activateTab(tabName) {
   document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.tab === tabId);
+    btn.classList.toggle("active", btn.dataset.tab === tabName);
   });
 
   document.querySelectorAll(".tab-panel").forEach(panel => {
-    panel.hidden = panel.id !== `panel-${tabId}`;
+    panel.hidden = panel.id !== `panel-${tabName}`;
   });
 
-  if (tabId === "stats") renderStats(people);
-  if (tabId === "mindmap") renderMindmap(people, edges);
-  if (tabId === "map") renderMap(people);
+  if (tabName === "stats") renderStats(people);
+  if (tabName === "graph") renderMindmap(people, mergedEdges);
+  if (tabName === "graph-stats") renderGraphStats(people, mergedEdges);
+  if (tabName === "map") renderMap(people);
 }
 
-function renderTable(data) {
-  const tbody = document.getElementById("people-tbody");
+function renderPeopleTable(data) {
+  const tbody = document.getElementById("people-table-body");
   if (!tbody) return;
 
-  tbody.innerHTML = data.map(p => `
+  tbody.innerHTML = data.map(person => `
     <tr>
-      <td>${p.name || "—"}</td>
-      <td>${p.category?.join(", ") || "—"}</td>
-      <td>${p.layer || "—"}</td>
-      <td>${p.relationshipStrength || "—"}</td>
-      <td>${p.clientStatus || "—"}</td>
-      <td>${p.cityCountry || "—"}</td>
-      <td>${p.industry?.join(", ") || "—"}</td>
+      <td>${escapeHtml(person.name || "—")}</td>
+      <td>${escapeHtml((person.category || []).join(", ") || "—")}</td>
+      <td>${escapeHtml(person.layer || "—")}</td>
+      <td>${person.relationshipStrength ?? "—"}</td>
+      <td>${escapeHtml(person.clientStatus || "—")}</td>
+      <td>${person.clientProbability != null ? `${person.clientProbability}%` : "—"}</td>
+      <td>${escapeHtml(person.cityCountry || "—")}</td>
+      <td>${escapeHtml((person.industry || []).join(", ") || "—")}</td>
+      <td>${escapeHtml(person.metVia || "—")}</td>
     </tr>
   `).join("");
 }
 
-function applyFilter(query) {
-  const q = query.toLowerCase();
-  const filtered = people.filter(p =>
-    (p.name || "").toLowerCase().includes(q) ||
-    (p.cityCountry || "").toLowerCase().includes(q) ||
-    (p.category || []).some(c => c.toLowerCase().includes(q)) ||
-    (p.industry || []).some(i => i.toLowerCase().includes(q))
-  );
-  renderTable(filtered);
+function wireTabs() {
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+  });
+}
+
+function wireSearch() {
+  const input = document.getElementById("search-input");
+  if (!input) return;
+
+  input.addEventListener("input", event => {
+    const q = event.target.value.trim().toLowerCase();
+
+    const filtered = people.filter(person => {
+      return [
+        person.name,
+        person.layer,
+        person.clientStatus,
+        person.cityCountry,
+        person.metVia,
+        ...(person.category || []),
+        ...(person.industry || [])
+      ]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(q));
+    });
+
+    renderPeopleTable(filtered);
+  });
+}
+
+function wireMindmapControls() {
+  const btn = document.getElementById("reset-graph-view");
+  btn?.addEventListener("click", () => resetMindmapView());
 }
 
 async function init() {
+  setTheme();
+  clearError();
+  showLoader(true);
+
   try {
-    const searchInput = document.getElementById("search");
-    searchInput?.addEventListener("input", e => applyFilter(e.target.value));
+    const [peopleData, edgesData] = await Promise.all([
+      fetchPeople(),
+      fetchEdges()
+    ]);
 
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => activateTab(btn.dataset.tab));
-    });
+    people = peopleData;
+    edgesDb = edgesData;
+    mergedEdges = buildMergedEdges(people, edgesDb);
 
-    const peoplePromise = fetchPeople();
-    const edgesPromise = fetchEdges().catch(err => {
-      console.warn("[app] edges failed, continuing without edges", err);
-      return [];
-    });
-
-    people = await peoplePromise;
-    edges = await edgesPromise;
-
-    hideLoader();
-
-    if (!Array.isArray(people) || people.length === 0) {
-      showError("People loaded, but no contacts were returned. Check your Notion database ID and property names.");
-      return;
-    }
-
-    renderTable(people);
+    renderPeopleTable(people);
+    wireTabs();
+    wireSearch();
+    wireMindmapControls();
     activateTab("stats");
-  } catch (err) {
-    console.error("[app] init failed", err);
-    showError(`Error loading data: ${err.message}`);
+  } catch (error) {
+    console.error("[app:init]", error);
+    showError(`Error loading dashboard: ${error.message}`);
+  } finally {
+    showLoader(false);
   }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 document.addEventListener("DOMContentLoaded", init);
