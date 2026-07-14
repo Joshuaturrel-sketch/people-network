@@ -1,54 +1,83 @@
-// map.js
-// Renders a Leaflet map with contact pins.
+let map = null;
+let markersLayer = null;
 
-import { CONFIG } from "./config.js";
-
-let mapInstance = null;
-
-const CITY_COORDS = {
-  "Madrid, Spain":       [40.4168, -3.7038],
-  "Barcelona, Spain":    [41.3851, 2.1734],
-  "London, UK":          [51.5074, -0.1278],
-  "Paris, France":       [48.8566, 2.3522],
-  "New York, USA":       [40.7128, -74.0060],
-  "Berlin, Germany":     [52.5200, 13.4050],
-  "Amsterdam, Netherlands": [52.3676, 4.9041],
-  "Lisbon, Portugal":    [38.7169, -9.1399],
-  "Mexico City, Mexico": [19.4326, -99.1332],
-  "Buenos Aires, Argentina": [-34.6037, -58.3816],
+const FALLBACK_COORDS = {
+  "Dundee": [56.4620, -2.9707],
+  "Madrid": [40.4168, -3.7038],
+  "London": [51.5072, -0.1276],
+  "Barcelona": [41.3874, 2.1686],
+  "Paris": [48.8566, 2.3522],
+  "New York": [40.7128, -74.0060],
+  "Berlin": [52.5200, 13.4050]
 };
 
-export function renderMap(people, containerId = "map-container") {
+export function renderMap(people) {
+  const containerId = "world-map";
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+  if (!map) {
+    map = L.map(containerId, {
+      zoomControl: true
+    }).setView([20, 0], 2);
 
-  mapInstance = L.map(containerId).setView([20, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>'
+    }).addTo(map);
 
-  L.tileLayer(CONFIG.MAP_TILE, { attribution: CONFIG.MAP_ATTRIBUTION }).addTo(mapInstance);
-
-  const byCityCountry = {};
-  for (const p of people) {
-    if (!p.cityCountry) continue;
-    if (!byCityCountry[p.cityCountry]) byCityCountry[p.cityCountry] = [];
-    byCityCountry[p.cityCountry].push(p);
+    markersLayer = L.layerGroup().addTo(map);
   }
 
-  for (const [city, group] of Object.entries(byCityCountry)) {
-    const coords = CITY_COORDS[city];
+  markersLayer.clearLayers();
+
+  const grouped = new Map();
+
+  for (const person of people) {
+    const key = (person.cityCountry || "").trim();
+    if (!key) continue;
+
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(person);
+  }
+
+  for (const [place, members] of grouped.entries()) {
+    const coords = resolveCoordinates(place);
     if (!coords) continue;
 
     const marker = L.circleMarker(coords, {
-      radius:      Math.max(6, Math.min(20, group.length * 3)),
-      fillColor:   "#01696f",
-      color:       "#fff",
-      weight:      2,
-      opacity:     1,
-      fillOpacity: 0.8,
-    }).addTo(mapInstance);
+      radius: Math.max(6, Math.min(20, members.length * 2.2)),
+      fillColor: "#4f98a3",
+      color: "#171614",
+      weight: 2,
+      fillOpacity: 0.85
+    });
 
-    const names = group.map(p => `<li>${p.name || "Unknown"}</li>`).join("");
-    marker.bindPopup(`<strong>${city}</strong> (${group.length})<ul style="padding-left:1rem;margin:.5rem 0">${names}</ul>`);
+    marker.bindPopup(`
+      <div style="min-width:220px">
+        <strong>${escapeHtml(place)}</strong><br>
+        Contacts: ${members.length}
+        <ul style="margin:8px 0 0 16px;padding:0;">
+          ${members.map(p => `<li>${escapeHtml(p.name || "Unknown")}</li>`).join("")}
+        </ul>
+      </div>
+    `);
+
+    marker.addTo(markersLayer);
   }
+
+  setTimeout(() => map.invalidateSize(), 100);
+}
+
+function resolveCoordinates(place) {
+  const normalized = place.split(",")[0].trim();
+  return FALLBACK_COORDS[place] || FALLBACK_COORDS[normalized] || null;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
