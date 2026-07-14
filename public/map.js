@@ -1,85 +1,54 @@
-import { geocode, dominantCategory } from "./data-utils.js";
-import { CATEGORY_COLORS } from "./config.js";
+// map.js
+// Renders a Leaflet map with contact pins.
 
-export async function renderWorldMap(people) {
-  const width = 1200;
-  const height = 620;
-  const mapRoot = d3.select("#map");
-  mapRoot.html("");
-  const svg = mapRoot.append("svg").attr("viewBox", `0 0 ${width} ${height}`);
-  const g = svg.append("g");
-  const projection = d3.geoNaturalEarth1().scale(210).translate([width / 2, height / 2]);
-  const path = d3.geoPath(projection);
+import { CONFIG } from "./config.js";
 
-  try {
-    const world = await d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json");
-    const countries = topojson.feature(world, world.objects.countries);
-    g.selectAll("path")
-      .data(countries.features)
-      .join("path")
-      .attr("d", path)
-      .attr("fill", "#ece8e1")
-      .attr("stroke", "#c9c2b8")
-      .attr("stroke-width", 0.7);
-  } catch {
-    mapRoot.append("p").text("World map data failed to load.");
+let mapInstance = null;
+
+const CITY_COORDS = {
+  "Madrid, Spain":       [40.4168, -3.7038],
+  "Barcelona, Spain":    [41.3851, 2.1734],
+  "London, UK":          [51.5074, -0.1278],
+  "Paris, France":       [48.8566, 2.3522],
+  "New York, USA":       [40.7128, -74.0060],
+  "Berlin, Germany":     [52.5200, 13.4050],
+  "Amsterdam, Netherlands": [52.3676, 4.9041],
+  "Lisbon, Portugal":    [38.7169, -9.1399],
+  "Mexico City, Mexico": [19.4326, -99.1332],
+  "Buenos Aires, Argentina": [-34.6037, -58.3816],
+};
+
+export function renderMap(people, containerId = "map-container") {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+
+  mapInstance = L.map(containerId).setView([20, 0], 2);
+
+  L.tileLayer(CONFIG.MAP_TILE, { attribution: CONFIG.MAP_ATTRIBUTION }).addTo(mapInstance);
+
+  const byCityCountry = {};
+  for (const p of people) {
+    if (!p.cityCountry) continue;
+    if (!byCityCountry[p.cityCountry]) byCityCountry[p.cityCountry] = [];
+    byCityCountry[p.cityCountry].push(p);
   }
 
-  const grouped = {};
-  const unknown = [];
+  for (const [city, group] of Object.entries(byCityCountry)) {
+    const coords = CITY_COORDS[city];
+    if (!coords) continue;
 
-  people.forEach(person => {
-    const coords = geocode(person.cityCountry);
-    if (!coords) {
-      unknown.push(person);
-      return;
-    }
+    const marker = L.circleMarker(coords, {
+      radius:      Math.max(6, Math.min(20, group.length * 3)),
+      fillColor:   "#01696f",
+      color:       "#fff",
+      weight:      2,
+      opacity:     1,
+      fillOpacity: 0.8,
+    }).addTo(mapInstance);
 
-    const city = person.cityCountry.trim().toLowerCase().split(",")[0].trim();
-    if (!grouped[city]) grouped[city] = { coords, people: [] };
-    grouped[city].people.push(person);
-  });
-
-  const points = Object.entries(grouped).map(([city, data]) => ({
-    city,
-    coords: data.coords,
-    count: data.people.length,
-    names: data.people.map(p => p.name),
-    dominant: dominantCategory(data.people.map(p => p.category || []))
-  }));
-
-  g.selectAll("circle")
-    .data(points)
-    .join("circle")
-    .attr("cx", d => projection([d.coords[1], d.coords[0]])[0])
-    .attr("cy", d => projection([d.coords[1], d.coords[0]])[1])
-    .attr("r", d => Math.max(6, Math.min(20, d.count * 2.4)))
-    .attr("fill", d => CATEGORY_COLORS[d.dominant] || "#bab9b4")
-    .attr("fill-opacity", 0.85)
-    .attr("stroke", "#ffffff")
-    .attr("stroke-width", 1.5)
-    .on("mousemove", (event, d) => showTooltip(event, `<strong>${capitalize(d.city)}</strong><br>${d.count} contact(s)<br>${d.names.join(", ")}`))
-    .on("mouseleave", hideTooltip);
-
-  svg.call(d3.zoom().scaleExtent([1, 8]).on("zoom", event => { g.attr("transform", event.transform); }));
-
-  document.getElementById("unknownLocations").innerHTML = unknown.length
-    ? `<ul>${unknown.map(p => `<li>${p.name}${p.cityCountry ? ` — ${p.cityCountry}` : ""}</li>`).join("")}</ul>`
-    : "<p>All contacts have mapped or approved locations.</p>";
-}
-
-function capitalize(str) {
-  return String(str || "").replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function showTooltip(event, html) {
-  const tooltip = document.getElementById("tooltip");
-  tooltip.innerHTML = html;
-  tooltip.classList.remove("hidden");
-  tooltip.style.left = `${event.pageX + 14}px`;
-  tooltip.style.top = `${event.pageY + 14}px`;
-}
-
-function hideTooltip() {
-  document.getElementById("tooltip").classList.add("hidden");
+    const names = group.map(p => `<li>${p.name || "Unknown"}</li>`).join("");
+    marker.bindPopup(`<strong>${city}</strong> (${group.length})<ul style="padding-left:1rem;margin:.5rem 0">${names}</ul>`);
+  }
 }
