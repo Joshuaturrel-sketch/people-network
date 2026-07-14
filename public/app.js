@@ -1,7 +1,7 @@
 import { fetchPeople, fetchEdges } from "./api-client.js";
 import { renderStats } from "./stats.js";
 import { renderMindmap, resetMindmapView } from "./mindmap.js";
-import { renderMap } from "./map.js";
+import { renderMap, clearMapGeocodeCache } from "./map.js";
 import { renderGraphStats } from "./graph-stats.js";
 import { buildMergedEdges } from "./data-utils.js";
 
@@ -10,8 +10,7 @@ let edgesDb = [];
 let mergedEdges = [];
 
 function setTheme() {
-  const root = document.documentElement;
-  root.setAttribute("data-theme", "dark");
+  document.documentElement.setAttribute("data-theme", "dark");
 }
 
 function showLoader(show) {
@@ -99,8 +98,21 @@ function wireSearch() {
 }
 
 function wireMindmapControls() {
-  const btn = document.getElementById("reset-graph-view");
-  btn?.addEventListener("click", () => resetMindmapView());
+  document.getElementById("reset-graph-view")?.addEventListener("click", () => {
+    resetMindmapView();
+  });
+}
+
+function wireMapControls() {
+  document.getElementById("refresh-map-geocoding")?.addEventListener("click", async () => {
+    await renderMap(people, { forceRefresh: true });
+  });
+
+  document.getElementById("clear-map-cache")?.addEventListener("click", () => {
+    clearMapGeocodeCache();
+    const status = document.getElementById("map-status");
+    if (status) status.textContent = "Geocode cache cleared.";
+  });
 }
 
 async function init() {
@@ -122,6 +134,7 @@ async function init() {
     wireTabs();
     wireSearch();
     wireMindmapControls();
+    wireMapControls();
     activateTab("stats");
   } catch (error) {
     console.error("[app:init]", error);
