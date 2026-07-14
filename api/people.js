@@ -1,27 +1,29 @@
+import { Client } from "@notionhq/client";
+
+const notion = new Client({ auth: process.env.NOTION_TOKEN });
+const DATABASE_ID = process.env.NOTION_PEOPLE_DB;
+
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  if (req.method === "OPTIONS") return res.status(200).end();
+
   try {
     const pages = [];
     let cursor;
 
     do {
-      const response = await fetch("https://api.notion.com/v1/databases/787fed7a-9b0e-46b3-b506-8782f14e4b7e/query", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.NOTION_TOKEN}`,
-          "Notion-Version": "2022-06-28",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) })
+      const response = await notion.databases.query({
+        database_id: DATABASE_ID,
+        start_cursor: cursor,
+        page_size: 100,
       });
-      if (!response.ok) throw new Error(await response.text());
-      const data = await response.json();
-      pages.push(...data.results);
-      cursor = data.has_more ? data.next_cursor : undefined;
+      pages.push(...response.results);
+      cursor = response.has_more ? response.next_cursor : undefined;
     } while (cursor);
 
-    res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=60");
-    res.status(200).json(pages);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(200).json({ results: pages });
+  } catch (err) {
+    console.error("[api/people]", err);
+    res.status(500).json({ error: err.message });
   }
 }
