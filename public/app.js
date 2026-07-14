@@ -1,32 +1,45 @@
 // app.js
-// Entry point — fetches data, wires tabs, renders all views.
-
 import { fetchPeople, fetchEdges } from "./api-client.js";
-import { renderStats }             from "./stats.js";
-import { renderMindmap }           from "./mindmap.js";
-import { renderMap }               from "./map.js";
+import { renderStats } from "./stats.js";
+import { renderMindmap } from "./mindmap.js";
+import { renderMap } from "./map.js";
 
 let people = [];
-let edges  = [];
+let edges = [];
 
-// ─── Tab routing ──────────────────────────────────────────────────────────────
+function showError(message) {
+  const error = document.getElementById("error-banner");
+  const loader = document.getElementById("loader");
+  if (loader) loader.hidden = true;
+  if (error) {
+    error.textContent = message;
+    error.hidden = false;
+  }
+}
+
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  if (loader) loader.hidden = true;
+}
+
 function activateTab(tabId) {
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
+
   document.querySelectorAll(".tab-panel").forEach(panel => {
     panel.hidden = panel.id !== `panel-${tabId}`;
   });
 
-  if (tabId === "stats")   renderStats(people);
+  if (tabId === "stats") renderStats(people);
   if (tabId === "mindmap") renderMindmap(people, edges);
-  if (tabId === "map")     renderMap(people);
+  if (tabId === "map") renderMap(people);
 }
 
-// ─── Search / filter ──────────────────────────────────────────────────────────
 function renderTable(data) {
   const tbody = document.getElementById("people-tbody");
   if (!tbody) return;
+
   tbody.innerHTML = data.map(p => `
     <tr>
       <td>${p.name || "—"}</td>
@@ -51,32 +64,36 @@ function applyFilter(query) {
   renderTable(filtered);
 }
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const loader = document.getElementById("loader");
-  const error  = document.getElementById("error-banner");
-
   try {
-    if (loader) loader.hidden = false;
-    [people, edges] = await Promise.all([fetchPeople(), fetchEdges()]);
-    if (loader) loader.hidden = true;
+    const searchInput = document.getElementById("search");
+    searchInput?.addEventListener("input", e => applyFilter(e.target.value));
 
-    renderTable(people);
-    activateTab("stats");
-
-    // Tab buttons
     document.querySelectorAll(".tab-btn").forEach(btn => {
       btn.addEventListener("click", () => activateTab(btn.dataset.tab));
     });
 
-    // Search
-    const searchInput = document.getElementById("search");
-    searchInput?.addEventListener("input", e => applyFilter(e.target.value));
+    const peoplePromise = fetchPeople();
+    const edgesPromise = fetchEdges().catch(err => {
+      console.warn("[app] edges failed, continuing without edges", err);
+      return [];
+    });
 
+    people = await peoplePromise;
+    edges = await edgesPromise;
+
+    hideLoader();
+
+    if (!Array.isArray(people) || people.length === 0) {
+      showError("People loaded, but no contacts were returned. Check your Notion database ID and property names.");
+      return;
+    }
+
+    renderTable(people);
+    activateTab("stats");
   } catch (err) {
-    console.error("[app]", err);
-    if (loader) loader.hidden = true;
-    if (error)  { error.textContent = `Error loading data: ${err.message}`; error.hidden = false; }
+    console.error("[app] init failed", err);
+    showError(`Error loading data: ${err.message}`);
   }
 }
 
