@@ -29,3 +29,13 @@ export async function fetchEdges() {
   const data = await parseJson(res, "Edges API");
   return (data.results || []).map(normalizeEdge);
 }
+
+#error-banner {
+  display: block;
+  margin: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #fde8e8;
+  color: #8a1f2d;
+  border: 1px solid #f5b8c2;
+}
