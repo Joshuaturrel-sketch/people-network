@@ -1,9 +1,9 @@
-export const CATEGORY_COLORS = {
-  Personal: "#d9a514",
-  Acquaintance: "#6b7280",
-  Professional: "#5ea83a",
-  Family: "#df8b1d",
-  Other: "#9ca3af"
-};
+// config.js
+// Central place for API endpoints and feature flags.
 
-export const INDUSTRY_OPTIONS = ["Marketing", "Communications", "Public Servant", "Retired", "Unemployed", "Self/Employed", "Other"];
+export const CONFIG = {
+  API_PEOPLE: "/api/people",
+  API_EDGES:  "/api/edges",
+  MAP_TILE:   "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  MAP_ATTRIBUTION: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+};
