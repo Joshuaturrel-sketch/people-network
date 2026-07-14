@@ -1,87 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>People Network</title>
-  <link rel="stylesheet" href="./styles.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
-  <script defer type="module" src="./app.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
+
+<div id="loader">Loading contacts…</div>
+<div id="error-banner" hidden></div>
+
+<div class="app-shell">
+  <!-- Top bar -->
   <header class="topbar">
-    <div>
-      <h1>People Network</h1>
-      <p class="subtle">Live from Notion</p>
+    <div class="topbar-left">
+      <!-- SVG Logo -->
+      <a class="logo" href="#">
+        <svg aria-label="People Network" width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <circle cx="14" cy="9"  r="4" fill="currentColor" opacity="0.9"/>
+          <circle cx="6"  cy="21" r="3" fill="currentColor" opacity="0.7"/>
+          <circle cx="22" cy="21" r="3" fill="currentColor" opacity="0.7"/>
+          <line x1="14" y1="13" x2="6"  y2="18" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+          <line x1="14" y1="13" x2="22" y2="18" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+          <line x1="6"  y1="21" x2="22" y2="21" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+        </svg>
+        People Network
+      </a>
+
+      <!-- Tabs -->
+      <nav class="tab-nav" aria-label="Views">
+        <button class="tab-btn active" data-tab="stats"   aria-controls="panel-stats">Stats</button>
+        <button class="tab-btn"        data-tab="people"  aria-controls="panel-people">People</button>
+        <button class="tab-btn"        data-tab="mindmap" aria-controls="panel-mindmap">Mind Map</button>
+        <button class="tab-btn"        data-tab="map"     aria-controls="panel-map">Map</button>
+      </nav>
     </div>
-    <nav class="tabs" aria-label="Views">
-      <button data-view="stats" class="tab active" type="button">Stats</button>
-      <button data-view="map" class="tab" type="button">World Map</button>
-      <button data-view="mindmap" class="tab" type="button">Mindmap</button>
-    </nav>
+
+    <div class="topbar-right">
+      <input id="search" type="search" placeholder="Search contacts…" aria-label="Search contacts">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
   </header>
 
-  <main class="app-shell">
-    <section id="stats-view" class="view active" aria-label="Stats view">
-      <div id="kpis" class="kpi-grid"></div>
+  <!-- Panels -->
+  <main class="main-content">
+
+    <!-- Stats -->
+    <section id="panel-stats" class="tab-panel" role="tabpanel">
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-label">Total Contacts</div><div class="kpi-value" id="kpi-total">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Active Clients</div><div class="kpi-value" id="kpi-clients">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Prospects</div><div class="kpi-value" id="kpi-prospects">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">Strong Relations</div><div class="kpi-value" id="kpi-strong">—</div></div>
+      </div>
+
       <div class="chart-grid">
-        <div class="chart-card"><h3>Contacts by Category</h3><div class="chart-box"><canvas id="categoryChart"></canvas></div></div>
-        <div class="chart-card"><h3>Jobs / Industry</h3><div class="chart-box"><canvas id="jobsIndustryChart"></canvas></div></div>
-        <div class="chart-card"><h3>Contacts by Layer</h3><div class="chart-box"><canvas id="layerChart"></canvas></div></div>
-        <div class="chart-card"><h3>Client Pipeline</h3><div class="chart-box"><canvas id="pipelineChart"></canvas></div></div>
-        <div class="chart-card"><h3>Relationship Strength</h3><div class="chart-box"><canvas id="strengthChart"></canvas></div></div>
-        <div class="chart-card"><h3>Client Probability</h3><div class="chart-box"><canvas id="probabilityChart"></canvas></div></div>
-        <div class="chart-card"><h3>Top Cities</h3><div class="chart-box"><canvas id="cityChart"></canvas></div></div>
-        <div class="chart-card"><h3>Network Growth</h3><div class="chart-box"><canvas id="growthChart"></canvas></div></div>
+        <div class="chart-card"><canvas id="chart-category"></canvas></div>
+        <div class="chart-card"><canvas id="chart-layer"></canvas></div>
+        <div class="chart-card"><canvas id="chart-strength"></canvas></div>
+        <div class="chart-card"><canvas id="chart-status"></canvas></div>
+        <div class="chart-card"><canvas id="chart-probability"></canvas></div>
+        <div class="chart-card"><canvas id="chart-city"></canvas></div>
+        <div class="chart-card"><canvas id="chart-growth"></canvas></div>
+        <div class="chart-card"><canvas id="chart-industry"></canvas></div>
       </div>
     </section>
 
-    <section id="map-view" class="view" aria-label="World map view">
-      <div class="card map-card">
-        <div id="map"></div>
-      </div>
-      <div class="card">
-        <h3>Location Unknown</h3>
-        <div id="unknownLocations"></div>
+    <!-- People Table -->
+    <section id="panel-people" class="tab-panel" role="tabpanel" hidden>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>Category</th><th>Layer</th>
+              <th>Strength</th><th>Client Status</th><th>City</th><th>Industry</th>
+            </tr>
+          </thead>
+          <tbody id="people-tbody"></tbody>
+        </table>
       </div>
     </section>
 
-    <section id="mindmap-view" class="view" aria-label="Mindmap view">
-      <div class="card controls-card">
-        <div class="controls">
-          <input id="searchInput" type="text" placeholder="Search name" />
-          <select id="layerFilter">
-            <option value="">All layers</option>
-            <option value="Knows Me">Knows Me</option>
-            <option value="Does Not Know Me">Does Not Know Me</option>
-          </select>
-          <select id="clientStatusFilter">
-            <option value="">All client statuses</option>
-            <option value="Potential Client">Potential Client</option>
-            <option value="Already Client">Already Client</option>
-            <option value="Former Client">Former Client</option>
-          </select>
-          <label class="range-wrap">
-            <span>Min strength</span>
-            <input id="strengthFilter" type="range" min="0" max="10" value="0" />
-            <strong id="strengthValue">0</strong>
-          </label>
-        </div>
-        <div id="categoryFilters" class="chips"></div>
-      </div>
-      <div class="card mindmap-shell">
-        <div class="mindmap-toolbar">
-          <button type="button" id="zoomInBtn" class="chip">Zoom in</button>
-          <button type="button" id="zoomOutBtn" class="chip">Zoom out</button>
-          <button type="button" id="resetViewBtn" class="chip">Reset view</button>
-        </div>
-        <svg id="mindmap"></svg>
-      </div>
+    <!-- Mind Map -->
+    <section id="panel-mindmap" class="tab-panel" role="tabpanel" hidden>
+      <div id="mindmap-container"></div>
     </section>
+
+    <!-- Map -->
+    <section id="panel-map" class="tab-panel" role="tabpanel" hidden>
+      <div id="map-container"></div>
+    </section>
+
   </main>
+</div>
 
-  <div id="tooltip" class="tooltip hidden"></div>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+
+<script>
+// Dark mode toggle (inline — runs before module load)
+(function(){
+  const r = document.documentElement;
+  const d = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  r.setAttribute('data-theme', d);
+  const btn = document.querySelector('[data-theme-toggle]');
+  if (btn) btn.addEventListener('click', () => {
+    const next = r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    r.setAttribute('data-theme', next);
+  });
+})();
+</script>
+
+<script type="module" src="./app.js"></script>
 </body>
 </html>
