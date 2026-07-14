@@ -1,25 +1,22 @@
 // data-utils.js
-// Normalized people network data helpers
+// Normalization helpers for Notion API responses.
 
-// ─── countBy ─────────────────────────────────────────────────────────────────
+// ─── countBy ──────────────────────────────────────────────────────────────────
 // Aggregates items using a callback that returns an iterable of keys.
-// Increments counts for every truthy key in that iterable.
 export function countBy(items, fn) {
   const counts = {};
   for (const item of items) {
-    const keys = fn(item);
-    for (const key of keys) {
+    for (const key of fn(item)) {
       if (key) counts[key] = (counts[key] || 0) + 1;
     }
   }
   return counts;
 }
 
-// ─── getProp ─────────────────────────────────────────────────────────────────
-// Safely extracts a Notion property value by name and type.
+// ─── getProp ──────────────────────────────────────────────────────────────────
 export function getProp(props, name, type) {
   const prop = props?.[name];
-  if (!prop) return null;
+  if (!prop) return type === "multi_select" ? [] : null;
 
   switch (type) {
     case "title":
@@ -42,66 +39,49 @@ export function getProp(props, name, type) {
       return prop.phone_number || null;
     case "url":
       return prop.url || null;
-    case "people":
-      return prop.people?.map(p => p.name || p.id) || [];
     default:
       return null;
   }
 }
 
-// ─── normalizePerson ─────────────────────────────────────────────────────────
-// Maps a raw Notion page into a flat, typed person record.
+// ─── normalizePerson ──────────────────────────────────────────────────────────
 export function normalizePerson(page) {
-  const props = page.properties || {};
+  const p = page.properties || {};
   return {
     id:                   page.id,
-    name:                 getProp(props, "Name",                  "title"),
-    category:             getProp(props, "Category",              "multi_select"),   // string[]
-    relationshipStrength: getProp(props, "Relationship Strength", "select"),
-    layer:                getProp(props, "Layer",                 "select"),
-    clientStatus:         getProp(props, "Client Status",         "select"),
-    clientProbability:    getProp(props, "Client Probability",    "number"),
-    cityCountry:          getProp(props, "City / Country",        "select"),
-    phone:                getProp(props, "Phone",                 "phone_number"),
-    email:                getProp(props, "Email",                 "email"),
-    industry:             getProp(props, "Jobs / Industry",       "multi_select"),   // string[]
-    connectedFrom:        getProp(props, "Connected From",        "date"),
-    connectedTo:          getProp(props, "Connected To",          "date"),
-    metVia:               getProp(props, "Met Via",               "select"),
-    notes:                getProp(props, "Notes",                 "rich_text"),
-    socialMedia:          getProp(props, "Social Media",          "url"),
-    referredBy:           getProp(props, "Referred By",           "rich_text"),
+    name:                 getProp(p, "Name",                  "title"),
+    category:             getProp(p, "Category",              "multi_select"),
+    relationshipStrength: getProp(p, "Relationship Strength", "select"),
+    layer:                getProp(p, "Layer",                 "select"),
+    clientStatus:         getProp(p, "Client Status",         "select"),
+    clientProbability:    getProp(p, "Client Probability",    "number"),
+    cityCountry:          getProp(p, "City / Country",        "select"),
+    phone:                getProp(p, "Phone",                 "phone_number"),
+    email:                getProp(p, "Email",                 "email"),
+    industry:             getProp(p, "Jobs / Industry",       "multi_select"),
+    connectedFrom:        getProp(p, "Connected From",        "date"),
+    connectedTo:          getProp(p, "Connected To",          "date"),
+    metVia:               getProp(p, "Met Via",               "select"),
+    notes:                getProp(p, "Notes",                 "rich_text"),
+    socialMedia:          getProp(p, "Social Media",          "url"),
+    referredBy:           getProp(p, "Referred By",           "rich_text"),
     createdTime:          page.created_time || null,
   };
 }
 
-// ─── normalizeEdge ───────────────────────────────────────────────────────────
+// ─── normalizeEdge ────────────────────────────────────────────────────────────
 export function normalizeEdge(page) {
-  const props = page.properties || {};
+  const p = page.properties || {};
   return {
     id:     page.id,
-    source: getProp(props, "From", "title"),
-    target: getProp(props, "To",   "rich_text"),
-    type:   getProp(props, "Type", "select"),
+    source: getProp(p, "From", "title"),
+    target: getProp(p, "To",   "rich_text"),
+    type:   getProp(p, "Type", "select"),
   };
 }
 
-// ─── buildMergedEdges ────────────────────────────────────────────────────────
-// Merges explicit edges with implicit co-category edges.
-export function buildMergedEdges(people, edges) {
-  return edges; // extend as needed
-}
-
-// ─── geocode ─────────────────────────────────────────────────────────────────
-// Placeholder — replace with real geocoding if needed.
-export function geocode(cityCountry) {
-  return null;
-}
-
 // ─── dominantCategory ────────────────────────────────────────────────────────
-// Returns the most frequent category across all people.
-export function dominantCategory(categories) {
-  if (!categories?.length) return null;
-  const counts = countBy(categories, c => [c]);
+export function dominantCategory(people) {
+  const counts = countBy(people, p => p.category || []);
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 }
