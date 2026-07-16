@@ -1,7 +1,5 @@
 {
-  "rewrites": [
-    { "source": "/api/people", "destination": "/api/people" },
-    { "source": "/api/edges", "destination": "/api/edges" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
-  ]
+  "outputDirectory": "public",
+  "buildCommand": "node scripts/fetch-notion.mjs && node scripts/build.mjs",
+  "installCommand": "npm install"
 }
