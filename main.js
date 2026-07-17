@@ -1,5 +1,4 @@
 // main.js
-import { buildMergedEdges } from "./data-utils.js";
 import { renderStats } from "./stats.js";
 import { renderMap } from "./map.js";
 
@@ -10,12 +9,14 @@ async function boot() {
   try {
     loading.textContent = "Fetching contacts from Notion…";
 
-    const res = await fetch("/api/notion");
+    const res = await fetch("/api/notion", { cache: "no-store" });
+    const text = await res.text();
+
     if (!res.ok) {
-      throw new Error(`API failed with status ${res.status}`);
+      throw new Error(`API failed with status ${res.status}: ${text}`);
     }
 
-    const { people, edges, mergedEdges } = await res.json();
+    const { people, edges, mergedEdges } = JSON.parse(text);
 
     console.log("[main] people:", people.length);
     console.log("[main] edges:", edges.length);
@@ -33,7 +34,6 @@ async function boot() {
 
     const totalHeader = document.getElementById("kpi-total-header");
     if (totalHeader) totalHeader.textContent = `${people.length} contacts`;
-
   } catch (err) {
     console.error("[main] boot failed:", err);
     loading.innerHTML = `
