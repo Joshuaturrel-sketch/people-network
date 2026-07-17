@@ -1,5 +1,0 @@
-{
-  "outputDirectory": "public",
-  "buildCommand": "node scripts/fetch-notion.mjs && node scripts/build.mjs",
-  "installCommand": "npm install"
-}
