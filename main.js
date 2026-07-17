@@ -12,15 +12,26 @@ async function boot() {
     const res = await fetch("/api/notion", { cache: "no-store" });
     const text = await res.text();
 
+    console.log("[main] /api/notion status:", res.status);
+    console.log("[main] /api/notion body:", text);
+
     if (!res.ok) {
       throw new Error(`API failed with status ${res.status}: ${text}`);
     }
 
-    const { people, edges, mergedEdges } = JSON.parse(text);
+    const data = JSON.parse(text);
+
+    const people = Array.isArray(data.people) ? data.people : [];
+    const edges = Array.isArray(data.edges) ? data.edges : [];
+    const mergedEdges = Array.isArray(data.mergedEdges) ? data.mergedEdges : [];
 
     console.log("[main] people:", people.length);
     console.log("[main] edges:", edges.length);
-    console.log("[main] sample edge:", mergedEdges[0]);
+    console.log("[main] mergedEdges:", mergedEdges.length);
+
+    if (!data.people || !data.edges || !data.mergedEdges) {
+      throw new Error(`Unexpected API response shape: ${text}`);
+    }
 
     window.people = people;
     window.edges = edges;
