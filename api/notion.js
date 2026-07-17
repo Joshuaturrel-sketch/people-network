@@ -5,7 +5,7 @@ const NOTION_TOKEN = process.env.NOTION_TOKEN;
 const PEOPLE_DB_ID = process.env.PEOPLE_DB_ID;
 const EDGES_DB_ID = process.env.EDGES_DB_ID;
 
-async function fetchAllPages(dbId, normalizer) {
+async function fetchAllPages(dbId, normalizer, label) {
   let rows = [];
   let cursor = undefined;
   let hasMore = true;
@@ -25,8 +25,11 @@ async function fetchAllPages(dbId, normalizer) {
     });
 
     const text = await res.text();
+    console.log(`[api/notion] ${label} status:`, res.status);
+    console.log(`[api/notion] ${label} body:`, text);
+
     if (!res.ok) {
-      throw new Error(`Notion API error ${res.status}: ${text}`);
+      throw new Error(`${label} query failed (${res.status}): ${text}`);
     }
 
     const json = JSON.parse(text);
@@ -40,13 +43,22 @@ async function fetchAllPages(dbId, normalizer) {
 
 export default async function handler(req, res) {
   try {
-    const people = await fetchAllPages(PEOPLE_DB_ID, normalizePerson);
-    const edges = await fetchAllPages(EDGES_DB_ID, normalizeEdge);
+    if (!NOTION_TOKEN) throw new Error("Missing NOTION_TOKEN env var");
+    if (!PEOPLE_DB_ID) throw new Error("Missing PEOPLE_DB_ID env var");
+    if (!EDGES_DB_ID) throw new Error("Missing EDGES_DB_ID env var");
+
+    const people = await fetchAllPages(PEOPLE_DB_ID, normalizePerson, "people");
+    const edges = await fetchAllPages(EDGES_DB_ID, normalizeEdge, "edges");
     const mergedEdges = buildMergedEdges(people, edges);
 
-    res.status(200).json({ people, edges, mergedEdges });
+    return res.status(200).json({ people, edges, mergedEdges });
   } catch (err) {
-    console.error("[api/notion]", err);
-    res.status(500).json({ error: err.message });
+    console.error("[api/notion] fatal:", err);
+    return res.status(500).json({
+      error: err.message,
+      hasToken: !!NOTION_TOKEN,
+      hasPeopleDb: !!PEOPLE_DB_ID,
+      hasEdgesDb: !!EDGES_DB_ID
+    });
   }
 }
