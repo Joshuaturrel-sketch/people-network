@@ -87,6 +87,9 @@ export function getTagValues(props, name) {
 export function normalizePerson(page) {
   const props = page.properties;
 
+  console.log("PROP KEYS", Object.keys(props));
+  console.log("RAW JOB FIELD", props["Jobs / Industry"]);
+
   return {
     id: page.id,
     name: getProp(props, "Name", "title"),
