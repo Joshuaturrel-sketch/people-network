@@ -33,16 +33,23 @@ export function renderMindmap({ containerId, people, edges }) {
 
   svg.call(zoom);
 
-  // Build nodes map
+  // Build nodes map with all details we want
   const nodesById = new Map();
   for (const p of people) {
     nodesById.set(p.id, {
       id: p.id,
       name: p.name || "Unknown",
       layer: p.layer || "Unknown",
-      category: Array.isArray(p.category) && p.category.length
-        ? p.category[0]
-        : "Uncategorized",
+      category:
+        Array.isArray(p.category) && p.category.length
+          ? p.category[0]
+          : "Uncategorized",
+      industry:
+        Array.isArray(p.industry) && p.industry.length
+          ? p.industry[0]
+          : "—",
+      clientStatus: p.clientStatus || "—",
+      cityCountry: p.cityCountry || "—",
       strength: p.relationshipStrength || 0,
       degree: 0
     });
@@ -69,6 +76,36 @@ export function renderMindmap({ containerId, people, edges }) {
   }
 
   const nodes = Array.from(nodesById.values());
+
+  // Details panel elements
+  const detailsEl = document.getElementById("person-details");
+  const detailsEmpty = detailsEl?.querySelector(".details-empty");
+  const detailsBody = detailsEl?.querySelector(".details-body");
+  const elName = document.getElementById("details-name");
+  const elLayer = document.getElementById("details-layer");
+  const elCategory = document.getElementById("details-category");
+  const elIndustry = document.getElementById("details-industry");
+  const elStatus = document.getElementById("details-status");
+  const elCity = document.getElementById("details-city");
+  const elStrength = document.getElementById("details-strength");
+  const elDegree = document.getElementById("details-degree");
+
+  function showDetails(d) {
+    if (!detailsEl || !detailsBody || !detailsEmpty) return;
+    detailsEmpty.hidden = true;
+    detailsBody.hidden = false;
+
+    if (elName) elName.textContent = d.name || "Unknown";
+    if (elLayer) elLayer.textContent = d.layer || "—";
+    if (elCategory) elCategory.textContent = d.category || "—";
+    if (elIndustry) elIndustry.textContent = d.industry || "—";
+    if (elStatus) elStatus.textContent = d.clientStatus || "—";
+    if (elCity) elCity.textContent = d.cityCountry || "—";
+    if (elStrength)
+      elStrength.textContent =
+        d.strength != null && d.strength !== 0 ? String(d.strength) : "—";
+    if (elDegree) elDegree.textContent = String(d.degree || 0);
+  }
 
   if (!nodes.length) {
     g
@@ -146,12 +183,28 @@ export function renderMindmap({ containerId, people, edges }) {
   const neighbors = buildNeighborMap(nodes, links);
 
   node
-    .on("mouseenter", (event, d) => highlightNode(d))
-    .on("mouseleave", resetHighlight);
+    .on("mouseenter", (event, d) => {
+      highlightNode(d);
+      showDetails(d);
+    })
+    .on("mouseleave", () => {
+      resetHighlight();
+    })
+    .on("click", (event, d) => {
+      showDetails(d);
+    });
 
   labels
-    .on("mouseenter", (event, d) => highlightNode(d))
-    .on("mouseleave", resetHighlight);
+    .on("mouseenter", (event, d) => {
+      highlightNode(d);
+      showDetails(d);
+    })
+    .on("mouseleave", () => {
+      resetHighlight();
+    })
+    .on("click", (event, d) => {
+      showDetails(d);
+    });
 
   simulation.on("tick", () => {
     link
