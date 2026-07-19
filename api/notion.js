@@ -6,8 +6,8 @@ const notion = new Client({ auth: process.env.NOTION_TOKEN });
 export default async function handler(req, res) {
   try {
     const hasToken = !!process.env.NOTION_TOKEN;
-    const hasPeopleDb = !!process.env.NOTION_DATABASE_ID;
-    const hasEdgesDb = !!process.env.NOTION_EDGES_DATABASE_ID;
+    const hasPeopleDb = !!process.env.PEOPLE_DB_ID;
+    const hasEdgesDb = !!process.env.EDGES_DB_ID;
 
     if (!hasToken || !hasPeopleDb || !hasEdgesDb) {
       return res.status(500).json({
@@ -19,8 +19,8 @@ export default async function handler(req, res) {
     }
 
     const [peoplePages, edgePages] = await Promise.all([
-      queryAll(process.env.NOTION_DATABASE_ID),
-      queryAll(process.env.NOTION_EDGES_DATABASE_ID)
+      queryAll(process.env.PEOPLE_DB_ID),
+      queryAll(process.env.EDGES_DB_ID)
     ]);
 
     res.status(200).json({
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
 async function queryAll(databaseId) {
   const results = [];
-  let cursor = undefined;
+  let cursor;
 
   do {
     const resp = await notion.databases.query({
