@@ -29,6 +29,9 @@ export function getProp(props, name, type) {
     case "multi_select":
       return prop.multi_select?.map(o => o.name).filter(Boolean) || [];
 
+    case "status":
+      return prop.status?.name || null;
+
     case "number":
       return prop.number ?? null;
 
@@ -52,6 +55,35 @@ export function getProp(props, name, type) {
   }
 }
 
+export function getTagValues(props, name) {
+  const prop = props?.[name];
+  if (!prop) return [];
+
+  if (prop.multi_select) {
+    return prop.multi_select.map(o => o.name).filter(Boolean);
+  }
+
+  if (prop.select?.name) {
+    return [prop.select.name];
+  }
+
+  if (prop.status?.name) {
+    return [prop.status.name];
+  }
+
+  if (prop.rich_text?.length) {
+    const text = prop.rich_text.map(t => t.plain_text).join("").trim();
+    return text ? [text] : [];
+  }
+
+  if (prop.title?.length) {
+    const text = prop.title.map(t => t.plain_text).join("").trim();
+    return text ? [text] : [];
+  }
+
+  return [];
+}
+
 export function normalizePerson(page) {
   const props = page.properties;
 
@@ -63,7 +95,7 @@ export function normalizePerson(page) {
     layer: getProp(props, "Layer", "select"),
     clientStatus: getProp(props, "Client Status", "select"),
     clientProbability: getProp(props, "Client Probability", "number"),
-    industry: getProp(props, "Jobs / Industry", "multi_select"),
+    industry: getTagValues(props, "Jobs / Industry"),
     cityCountry: getProp(props, "City/Country", "select"),
     phone: getProp(props, "Phone", "phone_number"),
     email: getProp(props, "Email", "email"),
