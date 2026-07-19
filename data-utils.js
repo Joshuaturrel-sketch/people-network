@@ -97,7 +97,7 @@ export function getTagValuesFlexible(props, names) {
 export function normalizePerson(page) {
   const props = page.properties;
 
-  if (!window.__loggedIndustryDebug) {
+  if (typeof window !== "undefined" && !window.__loggedIndustryDebug) {
     console.log("ALL PROPERTY KEYS:", Object.keys(props));
     console.log("FULL PROPERTIES OBJECT:", props);
     console.log("RAW Jobs / Industry:", props["Jobs / Industry"]);
