@@ -72,6 +72,7 @@ function barOpts(title, horizontal = false) {
     plugins: { ...base.plugins, legend: { display: false } },
     scales: {
       x: {
+        beginAtZero: true,
         ticks: { font: FONT, color: "#797876" },
         grid: { color: "rgba(255,255,255,0.05)" },
       },
@@ -106,7 +107,11 @@ function make(id, type, data, opts) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
   if (_charts[id]) _charts[id].destroy();
-  _charts[id] = new Chart(canvas.getContext("2d"), { type, data, options: opts });
+  _charts[id] = new Chart(canvas.getContext("2d"), {
+    type,
+    data,
+    options: opts,
+  });
 }
 
 export function renderKPIs(people, mergedEdges = []) {
@@ -217,7 +222,10 @@ function chartProbability(people) {
 
 function chartCity(people) {
   const counts = countBy(people, p => p.cityCountry);
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const sorted = Object.entries(counts)
+    .filter(([label, value]) => label && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
 
   make("chart-city", "bar", {
     labels: sorted.map(([label]) => label),
@@ -230,19 +238,32 @@ function chartCity(people) {
 }
 
 function chartIndustry(people) {
-  const counts = countBy(people, p => p.industry);
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const labels = sorted.map(([label]) => label);
+  const counts = countBy(people, p => {
+    const values = Array.isArray(p.industry) ? p.industry : [];
+    const clean = values.map(v => String(v).trim()).filter(Boolean);
+    return clean.length ? clean : ["Unknown"];
+  });
 
-  make("chart-industry", "doughnut", {
+  const sorted = Object.entries(counts)
+    .filter(([label, value]) => label && value > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8);
+
+  console.log("industry counts", sorted);
+
+  if (!sorted.length) return;
+
+  const labels = sorted.map(([label]) => label);
+  const data = sorted.map(([, value]) => value);
+
+  make("chart-industry", "bar", {
     labels,
     datasets: [{
-      data: sorted.map(([, value]) => value),
+      data,
       backgroundColor: labels.map((_, i) => COLORS[i % COLORS.length]),
-      borderWidth: 1,
-      borderColor: "#1c1b19",
+      borderRadius: 4,
     }],
-  }, donutOpts("Jobs / Industry"));
+  }, barOpts("Jobs / Industry", true));
 }
 
 function chartGrowth(people) {
