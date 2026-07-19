@@ -122,6 +122,69 @@ svg {
   display: block;
 }
 
+/* Layout for mindmap + details */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 0.9fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.details-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  min-height: 200px;
+}
+
+.details-card h3 {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--space-3);
+}
+
+.details-empty {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.details-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.details-name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.details-row span:first-child {
+  color: var(--muted);
+}
+
+.details-row span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .main {
     padding: var(--space-4);
