@@ -25,9 +25,54 @@
 
     <main class="main">
       <section class="view active" id="view-mindmap">
-        <div class="card">
-          <h3>Mindmap</h3>
-          <div id="mindmap-container"></div>
+        <div class="layout">
+          <div class="card">
+            <h3>Mindmap</h3>
+            <div id="mindmap-container"></div>
+          </div>
+
+          <aside class="details-card" id="person-details">
+            <h3>Details</h3>
+            <div class="details-empty">Hover or click a node to see details.</div>
+            <div class="details-body" hidden>
+              <div class="details-name" id="details-name"></div>
+
+              <div class="details-row">
+                <span>Layer</span>
+                <span id="details-layer"></span>
+              </div>
+
+              <div class="details-row">
+                <span>Category</span>
+                <span id="details-category"></span>
+              </div>
+
+              <div class="details-row">
+                <span>Jobs / Industry</span>
+                <span id="details-industry"></span>
+              </div>
+
+              <div class="details-row">
+                <span>Client status</span>
+                <span id="details-status"></span>
+              </div>
+
+              <div class="details-row">
+                <span>City / Country</span>
+                <span id="details-city"></span>
+              </div>
+
+              <div class="details-row">
+                <span>Relationship strength</span>
+                <span id="details-strength"></span>
+              </div>
+
+              <div class="details-row">
+                <span>Connections</span>
+                <span id="details-degree"></span>
+              </div>
+            </div>
+          </aside>
         </div>
       </section>
     </main>
