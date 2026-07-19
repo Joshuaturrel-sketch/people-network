@@ -2,13 +2,16 @@
 
 export function countBy(items, fn) {
   const counts = {};
+
   for (const item of items) {
     const keys = fn(item);
     const arr = Array.isArray(keys) ? keys : [keys];
+
     for (const key of arr) {
       if (key) counts[key] = (counts[key] || 0) + 1;
     }
   }
+
   return counts;
 }
 
@@ -55,8 +58,15 @@ export function getProp(props, name, type) {
   }
 }
 
-export function getTagValues(props, name) {
-  const prop = props?.[name];
+function getFirstMatchingProp(props, names) {
+  for (const name of names) {
+    if (props?.[name]) return props[name];
+  }
+  return null;
+}
+
+export function getTagValuesFlexible(props, names) {
+  const prop = getFirstMatchingProp(props, names);
   if (!prop) return [];
 
   if (prop.multi_select) {
@@ -87,8 +97,14 @@ export function getTagValues(props, name) {
 export function normalizePerson(page) {
   const props = page.properties;
 
-  console.log("PROP KEYS", Object.keys(props));
-  console.log("RAW JOB FIELD", props["Jobs / Industry"]);
+  if (!window.__loggedIndustryDebug) {
+    console.log("ALL PROPERTY KEYS:", Object.keys(props));
+    console.log("FULL PROPERTIES OBJECT:", props);
+    console.log("RAW Jobs / Industry:", props["Jobs / Industry"]);
+    console.log("RAW Industry:", props["Industry"]);
+    console.log("RAW Job / Industry:", props["Job / Industry"]);
+    window.__loggedIndustryDebug = true;
+  }
 
   return {
     id: page.id,
@@ -98,7 +114,13 @@ export function normalizePerson(page) {
     layer: getProp(props, "Layer", "select"),
     clientStatus: getProp(props, "Client Status", "select"),
     clientProbability: getProp(props, "Client Probability", "number"),
-    industry: getTagValues(props, "Jobs / Industry"),
+    industry: getTagValuesFlexible(props, [
+      "Jobs / Industry",
+      "Job / Industry",
+      "Jobs/Industry",
+      "Industry",
+      "Job Industry"
+    ]),
     cityCountry: getProp(props, "City/Country", "select"),
     phone: getProp(props, "Phone", "phone_number"),
     email: getProp(props, "Email", "email"),
