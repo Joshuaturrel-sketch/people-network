@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>People Network Mindmap</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="loading">Loading people network…</div>
+
+  <div id="app">
+    <header class="header">
+      <div class="header-title">People Network Mindmap</div>
+      <div class="header-meta" id="kpi-summary"></div>
+    </header>
+
+    <main class="main">
+      <section class="view active" id="view-mindmap">
+        <div class="card">
+          <h3>Mindmap</h3>
+          <div id="mindmap-container"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
